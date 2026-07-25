@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Photo = {
   id: string;
@@ -13,14 +13,20 @@ type Photo = {
   createdAt?: string;
 };
 
+type Folder = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
 const ACCESS_KEY = "family-anniversary-access";
 
-const defaultCategories = [
-  "Наша история",
-  "Путешествия",
-  "Дом",
-  "Праздники",
-  "Любимые моменты",
+const defaultFolders: Folder[] = [
+  { id: "default-1", name: "Наша история", createdAt: "" },
+  { id: "default-2", name: "Путешествия", createdAt: "" },
+  { id: "default-3", name: "Дом", createdAt: "" },
+  { id: "default-4", name: "Праздники", createdAt: "" },
+  { id: "default-5", name: "Любимые моменты", createdAt: "" },
 ];
 
 const starterPhotos: Photo[] = [
@@ -54,16 +60,10 @@ export default function Home() {
   const [isUnlocked, setIsUnlocked] = useState(
     () => typeof window !== "undefined" && window.localStorage.getItem(ACCESS_KEY) === "family"
   );
-  const [isAdmin, setIsAdmin] = useState(false);
   const [accessCode, setAccessCode] = useState("");
-  const [adminCode, setAdminCode] = useState("");
   const [activeCategory, setActiveCategory] = useState("Все");
   const [photos, setPhotos] = useState<Photo[]>(starterPhotos);
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadCategory, setUploadCategory] = useState(defaultCategories[0]);
-  const [uploadNote, setUploadNote] = useState("");
-  const [uploadDate, setUploadDate] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [folders, setFolders] = useState<Folder[]>(defaultFolders);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -83,31 +83,31 @@ export default function Home() {
         if (!response.ok) {
           throw new Error("Не получилось загрузить фотографии.");
         }
-        return (await response.json()) as { photos?: Photo[] };
+        return (await response.json()) as { photos?: Photo[]; folders?: Folder[] };
       })
       .then((payload) => {
         if (!isActive) {
           return;
         }
         const serverPhotos = payload.photos ?? [];
+        const serverFolders = payload.folders ?? [];
         setPhotos(serverPhotos.length > 0 ? serverPhotos : starterPhotos);
+        setFolders(serverFolders.length > 0 ? serverFolders : defaultFolders);
       })
       .catch(() => {
         if (isActive) {
           setPhotos(starterPhotos);
+          setFolders(defaultFolders);
           setMessage("Введите семейный код, чтобы открыть альбом.");
         }
-      })
+      });
 
     return () => {
       isActive = false;
     };
   }, [isUnlocked]);
 
-  const categories = useMemo(() => {
-    const names = new Set(["Все", ...defaultCategories, ...photos.map((photo) => photo.category)]);
-    return Array.from(names);
-  }, [photos]);
+  const categories = useMemo(() => ["Все", ...folders.map((folder) => folder.name)], [folders]);
 
   const filteredPhotos = useMemo(() => {
     if (activeCategory === "Все") {
@@ -137,98 +137,6 @@ export default function Home() {
     }
 
     setMessage(payload.error ?? "Проверьте семейный код и попробуйте еще раз.");
-  }
-
-  async function unlockAdmin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const response = await fetch("/api/admin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ adminCode }),
-    });
-    const payload = (await response.json()) as { error?: string };
-
-    if (response.ok) {
-      setIsAdmin(true);
-      setMessage("Админ-панель открыта.");
-      return;
-    }
-
-    setMessage(payload.error ?? "Пароль администратора не подошел.");
-  }
-
-  function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    setSelectedFile(event.target.files?.[0] ?? null);
-  }
-
-  async function addPhoto(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedFile) {
-      setMessage("Выберите фотографию для загрузки.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.set("adminCode", adminCode);
-    formData.set("title", uploadTitle);
-    formData.set("category", uploadCategory);
-    formData.set("note", uploadNote);
-    formData.set("date", uploadDate);
-    formData.set("file", selectedFile);
-
-    const response = await fetch("/api/photos", {
-      method: "POST",
-      body: formData,
-    });
-    const payload = (await response.json()) as { photo?: Photo; error?: string };
-
-    if (!response.ok || !payload.photo) {
-      setMessage(payload.error ?? "Не получилось загрузить фотографию.");
-      return;
-    }
-
-    setPhotos((current) => {
-      const currentServerPhotos = current.filter((photo) => !photo.id.startsWith("starter-"));
-      return [payload.photo!, ...currentServerPhotos];
-    });
-    setUploadTitle("");
-    setUploadNote("");
-    setUploadDate("");
-    setSelectedFile(null);
-    setMessage("Фотография добавлена в семейный альбом.");
-    event.currentTarget.reset();
-  }
-
-  async function deletePhoto(id: string) {
-    if (id.startsWith("starter-")) {
-      return;
-    }
-
-    const response = await fetch(`/api/photos/${id}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ adminCode }),
-    });
-    const payload = (await response.json()) as { error?: string };
-
-    if (!response.ok) {
-      setMessage(payload.error ?? "Не получилось удалить фотографию.");
-      return;
-    }
-
-    setPhotos((current) => {
-      const nextPhotos = current.filter((photo) => photo.id !== id);
-      return nextPhotos.length > 0 ? nextPhotos : starterPhotos;
-    });
-  }
-
-  function showStarter() {
-    setPhotos(starterPhotos);
-    setMessage("Показываю стартовые карточки для пустого альбома.");
   }
 
   if (!isUnlocked) {
@@ -280,21 +188,18 @@ export default function Home() {
           </p>
           <div className="hero-actions">
             <a href="#gallery">Смотреть альбом</a>
-            <a href="#admin" className="secondary-link">
-              Загрузить фото
-            </a>
           </div>
         </div>
       </section>
 
       <section className="memory-strip" aria-label="Статистика альбома">
         <div>
-          <strong>{photos.length}</strong>
+          <strong>{photos.filter((photo) => !photo.id.startsWith("starter-")).length}</strong>
           <span>фото в альбоме</span>
         </div>
         <div>
-          <strong>{Math.max(categories.length - 1, 0)}</strong>
-          <span>категорий</span>
+          <strong>{folders.length}</strong>
+          <span>папок</span>
         </div>
         <div>
           <strong>1</strong>
@@ -308,7 +213,7 @@ export default function Home() {
           <h2>Разделы семейной истории</h2>
         </div>
 
-        <div className="category-tabs" role="tablist" aria-label="Категории фото">
+        <div className="category-tabs" role="tablist" aria-label="Папки с фото">
           {categories.map((category) => (
             <button
               key={category}
@@ -321,88 +226,25 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="photo-grid">
-          {filteredPhotos.map((photo) => (
-            <article className="photo-card" key={photo.id}>
-              <img src={photo.src} alt={photo.title} />
-              <div className="photo-body">
-                <span>{photo.category}</span>
-                <h3>{photo.title}</h3>
-                {photo.date && <p className="photo-date">{photo.date}</p>}
-                {photo.note && <p>{photo.note}</p>}
-                {isAdmin && !photo.id.startsWith("starter-") && (
-                  <button type="button" className="danger-button" onClick={() => deletePhoto(photo.id)}>
-                    Удалить
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="admin" className="admin-band">
-        <div className="admin-copy">
-          <p className="eyebrow">Админ-панель</p>
-          <h2>Добавление фотографий</h2>
-          <p>
-            Загрузите снимок, выберите раздел и добавьте короткую подпись. В
-            рабочей версии фотографии сохраняются на сервере и будут видны всем,
-            кто откроет альбом по QR и введет семейный код.
-          </p>
-        </div>
-
-        {!isAdmin ? (
-          <form className="admin-form compact" onSubmit={unlockAdmin}>
-            <label htmlFor="admin-code">Пароль администратора</label>
-            <div className="code-row">
-              <input
-                id="admin-code"
-                value={adminCode}
-                onChange={(event) => setAdminCode(event.target.value)}
-                placeholder="Введите пароль"
-                autoComplete="off"
-              />
-              <button type="submit">Войти</button>
-            </div>
-            {message && <p className="form-message">{message}</p>}
-          </form>
+        {filteredPhotos.length > 0 ? (
+          <div className="photo-grid">
+            {filteredPhotos.map((photo) => (
+              <article className="photo-card" key={photo.id}>
+                <img src={photo.src} alt={photo.title} />
+                <div className="photo-body">
+                  <span>{photo.category}</span>
+                  <h3>{photo.title}</h3>
+                  {photo.date && <p className="photo-date">{photo.date}</p>}
+                  {photo.note && <p>{photo.note}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
         ) : (
-          <form className="admin-form" onSubmit={addPhoto}>
-            <div className="field-grid">
-              <label>
-                Название
-                <input value={uploadTitle} onChange={(event) => setUploadTitle(event.target.value)} placeholder="Например, Наша прогулка" />
-              </label>
-              <label>
-                Категория
-                <select value={uploadCategory} onChange={(event) => setUploadCategory(event.target.value)}>
-                  {defaultCategories.map((category) => (
-                    <option key={category}>{category}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <label>
-              Дата или подпись времени
-              <input value={uploadDate} onChange={(event) => setUploadDate(event.target.value)} placeholder="Например, июль 2026" />
-            </label>
-            <label>
-              Короткая история
-              <textarea value={uploadNote} onChange={(event) => setUploadNote(event.target.value)} placeholder="Что стоит помнить об этом кадре?" />
-            </label>
-            <label className="file-drop">
-              <input type="file" accept="image/*" onChange={handleFile} />
-              <span>{selectedFile ? selectedFile.name : "Выберите фотографию"}</span>
-            </label>
-            <div className="admin-actions">
-              <button type="submit">Добавить фото</button>
-              <button type="button" className="ghost-button" onClick={showStarter}>
-                Показать заглушки
-              </button>
-            </div>
-            {message && <p className="form-message">{message}</p>}
-          </form>
+          <div className="empty-state">
+            <h3>В этой папке пока нет фотографий</h3>
+            <p>Добавьте первые снимки через отдельную админ-страницу.</p>
+          </div>
         )}
       </section>
     </main>

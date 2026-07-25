@@ -1,0 +1,17 @@
+services:
+  family-album:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      FAMILY_CODE: "${FAMILY_CODE}"
+      ADMIN_CODE: "${ADMIN_CODE}"
+      FAMILY_ALBUM_DATA_DIR: "/data"
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - family_album_data:/data
+
+volumes:
+  family_album_data:

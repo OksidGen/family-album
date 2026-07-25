@@ -1,4 +1,4 @@
-import { assertAdminCode, deleteStoredPhoto } from "../storage";
+import { assertAdminCode, deleteFolder } from "../../photos/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +19,12 @@ export async function DELETE(request: Request, context: RouteContext) {
       return unauthorized;
     }
 
-    const photo = await deleteStoredPhoto(id);
-    if (!photo) {
-      return Response.json({ error: "Фотография не найдена." }, { status: 404 });
+    const result = await deleteFolder(id);
+    if (!result) {
+      return Response.json({ error: "Папка не найдена." }, { status: 404 });
     }
 
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, deletedPhotos: result.deletedPhotos });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return Response.json({ error: message }, { status: 500 });

@@ -1,11 +1,16 @@
 import {
-  assertFamilyAccess,
   assertAdminCode,
-  ensurePhotosSchema,
-  getBindings,
+  assertFamilyOrAdminAccess,
+  addStoredPhoto,
+  ensureStorage,
+  extensionForContentType,
   photoToResponse,
-  toStoredPhoto,
+  readFolders,
+  readPhotos,
+  uploadsDir,
 } from "./storage";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
@@ -17,24 +22,16 @@ function cleanText(value: FormDataEntryValue | null, fallback = "") {
 
 export async function GET(request: Request) {
   try {
-    const unauthorized = assertFamilyAccess(request);
+    const unauthorized = assertFamilyOrAdminAccess(request);
     if (unauthorized) {
       return unauthorized;
     }
 
-    const { db } = getBindings();
-    await ensurePhotosSchema(db);
-
-    const result = await db
-      .prepare(
-        `SELECT id, title, category, note, date, image_key, content_type, created_at
-         FROM photos
-         ORDER BY created_at DESC`
-      )
-      .all<Record<string, unknown>>();
+    const [photos, folders] = await Promise.all([readPhotos(), readFolders()]);
 
     return Response.json({
-      photos: (result.results ?? []).map((row) => photoToResponse(toStoredPhoto(row))),
+      photos: photos.map(photoToResponse),
+      folders,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
@@ -63,32 +60,31 @@ export async function POST(request: Request) {
       return Response.json({ error: "Файл должен быть не больше 10 МБ." }, { status: 400 });
     }
 
-    const { db, bucket } = getBindings();
-    await ensurePhotosSchema(db);
+    await ensureStorage();
 
     const id = crypto.randomUUID();
     const title = cleanText(formData.get("title"), file.name.replace(/\.[^/.]+$/, ""));
-    const category = cleanText(formData.get("category"), "Любимые моменты");
+    const folders = await readFolders();
+    const category = cleanText(formData.get("category"), folders[0]?.name ?? "Любимые моменты");
     const note = cleanText(formData.get("note"));
     const date = cleanText(formData.get("date"));
     const contentType = file.type || "application/octet-stream";
-    const imageKey = `photos/${id}`;
+    const imageKey = `${id}${extensionForContentType(contentType)}`;
     const createdAt = new Date().toISOString();
 
-    await bucket.put(imageKey, file.stream(), {
-      httpMetadata: {
-        contentType,
-      },
-    });
+    const bytes = Buffer.from(await file.arrayBuffer());
+    await writeFile(path.join(uploadsDir(), imageKey), bytes);
 
-    await db
-      .prepare(
-        `INSERT INTO photos
-          (id, title, category, note, date, image_key, content_type, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(id, title, category, note, date, imageKey, contentType, createdAt)
-      .run();
+    await addStoredPhoto({
+      id,
+      title,
+      category,
+      note,
+      date,
+      imageKey,
+      contentType,
+      createdAt,
+    });
 
     return Response.json(
       {

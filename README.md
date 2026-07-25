@@ -1,98 +1,95 @@
-# vinext-starter
+# Family Anniversary Album
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Закрытый семейный фотоальбом для годовщины свадьбы. Сайт открывается по QR,
+просмотр альбома закрыт семейным кодом, а загрузка фотографий и управление
+папками доступны на отдельной странице `/admin`.
 
-## Prerequisites
+## Хранение на VPS
 
-- Node.js `>=22.13.0`
+Приложение хранит данные прямо на сервере:
 
-## Quick Start
+- `photos.json` - индекс фотографий и подписи;
+- `folders.json` - список папок альбома;
+- `uploads/` - оригиналы загруженных изображений.
+
+Папка данных задается переменной `FAMILY_ALBUM_DATA_DIR`. В Docker Compose она
+смонтирована в volume `family_album_data` по пути `/data`.
+
+## Переменные окружения
+
+Создайте `.env` на основе `.env.example`:
 
 ```bash
-npm install
-npm run dev
-npm run build
+cp .env.example .env
 ```
 
-This starter does not use `wrangler.jsonc`.
+Минимальные переменные:
 
-## Included Shape
+```bash
+FAMILY_CODE=your-family-code
+ADMIN_CODE=your-admin-password
+FAMILY_ALBUM_DATA_DIR=.family-album-data
+COOKIE_SECURE=true
+```
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+Оставьте `COOKIE_SECURE=true` для HTTPS через Nginx. Если временно тестируете
+сайт напрямую по `http://server-ip:3000`, поставьте `COOKIE_SECURE=false`, иначе
+браузер не сохранит cookie входа.
 
-## Workspace Auth Headers
+## Локальный запуск
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+```bash
+npm ci
+npm run dev
+```
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+Сайт будет доступен на `http://localhost:3000`.
 
-Treat the full name as optional and fall back to email when it is absent:
+Админ-панель находится на `http://localhost:3000/admin`.
 
-```tsx
-import { headers } from "next/headers";
+## Проверка сборки
 
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
+```bash
+npm run lint
+npm test
+```
 
-  const displayName = fullName ?? email;
-  // ...
+## Запуск на VPS через Docker Compose
+
+1. Скопируйте проект на сервер.
+2. Создайте `.env` рядом с `docker-compose.yml`.
+3. Запустите:
+
+```bash
+docker compose up -d --build
+```
+
+Приложение будет слушать порт `3000`.
+
+## Nginx
+
+Минимальный reverse proxy:
+
+```nginx
+server {
+    server_name album.example.com;
+
+    client_max_body_size 25M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+После этого включите HTTPS через Let's Encrypt, например `certbot --nginx`.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## Бэкапы
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+Бэкапить нужно Docker volume `family_album_data` или папку, указанную в
+`FAMILY_ALBUM_DATA_DIR`. Внутри находятся и индекс, и загруженные фото.

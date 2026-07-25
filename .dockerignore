@@ -1,0 +1,13 @@
+.git
+.next
+.family-album-data
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+dist
+.vinext
+.wrangler
+outputs
+work

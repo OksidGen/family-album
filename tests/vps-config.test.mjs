@@ -1,0 +1,38 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const root = new URL("../", import.meta.url);
+
+async function read(path) {
+  return readFile(new URL(path, root), "utf8");
+}
+
+test("uses standard Next.js scripts for VPS deployment", async () => {
+  const packageJson = JSON.parse(await read("package.json"));
+
+  assert.equal(packageJson.scripts.dev, "next dev");
+  assert.equal(packageJson.scripts.build, "next build");
+  assert.equal(packageJson.scripts.start, "next start");
+  assert.equal(packageJson.scripts["start:standalone"], "node .next/standalone/server.js");
+  assert.equal(packageJson.dependencies.next, "16.2.6");
+  assert.equal(packageJson.devDependencies.vinext, undefined);
+  assert.equal(packageJson.devDependencies.wrangler, undefined);
+});
+
+test("keeps uploaded photo storage on the VPS filesystem", async () => {
+  const storage = await read("app/api/photos/storage.ts");
+  const compose = await read("docker-compose.yml");
+  const dockerfile = await read("Dockerfile");
+  const envExample = await read(".env.example");
+
+  assert.match(storage, /node:fs\/promises/);
+  assert.match(storage, /FAMILY_ALBUM_DATA_DIR/);
+  assert.match(storage, /folders\.json/);
+  assert.match(storage, /deleteFolder/);
+  assert.doesNotMatch(storage, /cloudflare:workers|D1Database|R2Bucket/);
+  assert.match(compose, /family_album_data/);
+  assert.match(dockerfile, /VOLUME \["\/data"\]/);
+  assert.match(envExample, /FAMILY_CODE=/);
+  assert.match(envExample, /ADMIN_CODE=/);
+});

@@ -1,4 +1,11 @@
-import { env } from "cloudflare:workers";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+export type StoredFolder = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
 
 export type StoredPhoto = {
   id: string;
@@ -11,29 +18,6 @@ export type StoredPhoto = {
   createdAt: string;
 };
 
-const ADMIN_CODE = "ALBUM2026";
-const FAMILY_CODE = "LOVE2026";
-const FAMILY_ACCESS_COOKIE = "family_album_access";
-
-const createPhotosTable = `
-CREATE TABLE IF NOT EXISTS photos (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  category TEXT NOT NULL,
-  note TEXT NOT NULL DEFAULT '',
-  date TEXT NOT NULL DEFAULT '',
-  image_key TEXT NOT NULL,
-  content_type TEXT NOT NULL,
-  created_at TEXT NOT NULL
-)
-`;
-
-const createPhotosCategoryIndex =
-  "CREATE INDEX IF NOT EXISTS photos_category_idx ON photos (category)";
-
-const createPhotosCreatedIndex =
-  "CREATE INDEX IF NOT EXISTS photos_created_idx ON photos (created_at)";
-
 export type PhotoResponse = {
   id: string;
   title: string;
@@ -44,8 +28,54 @@ export type PhotoResponse = {
   createdAt: string;
 };
 
+export type FolderResponse = StoredFolder;
+
+const DEFAULT_ADMIN_CODE = "ALBUM2026";
+const DEFAULT_FAMILY_CODE = "LOVE2026";
+const FAMILY_ACCESS_COOKIE = "family_album_access";
+const DEFAULT_DATA_DIR = path.join(process.cwd(), ".family-album-data");
+const DEFAULT_FOLDERS = [
+  "Наша история",
+  "Путешествия",
+  "Дом",
+  "Праздники",
+  "Любимые моменты",
+];
+
+function dataDir() {
+  return process.env.FAMILY_ALBUM_DATA_DIR || DEFAULT_DATA_DIR;
+}
+
+function indexPath() {
+  return path.join(dataDir(), "photos.json");
+}
+
+function foldersPath() {
+  return path.join(dataDir(), "folders.json");
+}
+
+export function uploadsDir() {
+  return path.join(dataDir(), "uploads");
+}
+
+function adminCode() {
+  return process.env.ADMIN_CODE || DEFAULT_ADMIN_CODE;
+}
+
+function familyCode() {
+  return process.env.FAMILY_CODE || DEFAULT_FAMILY_CODE;
+}
+
+function isAdminCode(value: FormDataEntryValue | string | null) {
+  return String(value ?? "").trim() === adminCode();
+}
+
+export async function ensureStorage() {
+  await mkdir(uploadsDir(), { recursive: true });
+}
+
 export function assertAdminCode(value: FormDataEntryValue | string | null) {
-  if (String(value ?? "").trim().toUpperCase() !== ADMIN_CODE) {
+  if (!isAdminCode(value)) {
     return Response.json({ error: "Неверный пароль администратора." }, { status: 401 });
   }
 
@@ -61,38 +91,211 @@ export function assertFamilyAccess(request: Request) {
   return Response.json({ error: "Нужен семейный код." }, { status: 401 });
 }
 
+export function assertFamilyOrAdminAccess(request: Request) {
+  const familyUnauthorized = assertFamilyAccess(request);
+  if (!familyUnauthorized) {
+    return null;
+  }
+
+  if (isAdminCode(request.headers.get("x-admin-code"))) {
+    return null;
+  }
+
+  return familyUnauthorized;
+}
+
 export function createFamilyAccessResponse(value: string | null) {
-  if (String(value ?? "").trim().toUpperCase() !== FAMILY_CODE) {
+  if (String(value ?? "").trim() !== familyCode()) {
     return Response.json({ error: "Проверьте семейный код и попробуйте еще раз." }, { status: 401 });
   }
+
+  const shouldUseSecureCookie =
+    process.env.COOKIE_SECURE?.toLowerCase() !== "false" && process.env.NODE_ENV === "production";
+  const secureCookie = shouldUseSecureCookie ? " Secure;" : "";
 
   return Response.json(
     { ok: true },
     {
       headers: {
-        "Set-Cookie": `${FAMILY_ACCESS_COOKIE}=granted; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+        "Set-Cookie": `${FAMILY_ACCESS_COOKIE}=granted; HttpOnly;${secureCookie} SameSite=Lax; Path=/; Max-Age=2592000`,
       },
     }
   );
 }
 
-export function getBindings() {
-  if (!env.DB || !env.ALBUM_BUCKET) {
-    throw new Error("Storage bindings are unavailable.");
-  }
-
-  return {
-    db: env.DB,
-    bucket: env.ALBUM_BUCKET,
-  };
+function normalizeFolderName(name: string) {
+  return name.trim().replace(/\s+/g, " ");
 }
 
-export async function ensurePhotosSchema(db: D1Database) {
-  await db.batch([
-    db.prepare(createPhotosTable),
-    db.prepare(createPhotosCategoryIndex),
-    db.prepare(createPhotosCreatedIndex),
-  ]);
+function defaultFolders(): StoredFolder[] {
+  const now = new Date().toISOString();
+  return DEFAULT_FOLDERS.map((name, index) => ({
+    id: `default-${index + 1}`,
+    name,
+    createdAt: now,
+  }));
+}
+
+async function readJsonFile<T>(filePath: string, fallback: T) {
+  try {
+    const raw = await readFile(filePath, "utf8");
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return fallback;
+    }
+    throw error;
+  }
+}
+
+async function readOptionalJsonFile<T>(filePath: string) {
+  try {
+    const raw = await readFile(filePath, "utf8");
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function readPhotos() {
+  await ensureStorage();
+
+  const photos = await readJsonFile<StoredPhoto[]>(indexPath(), []);
+  return Array.isArray(photos) ? photos : [];
+}
+
+async function writeJsonFile<T>(filePath: string, value: T) {
+  await ensureStorage();
+
+  const temporary = `${filePath}.${crypto.randomUUID()}.tmp`;
+  await writeFile(temporary, JSON.stringify(value, null, 2), "utf8");
+  await rename(temporary, filePath);
+}
+
+export async function writePhotos(photos: StoredPhoto[]) {
+  await writeJsonFile(indexPath(), photos);
+}
+
+export async function readFolders() {
+  await ensureStorage();
+
+  const savedFolders = await readOptionalJsonFile<StoredFolder[]>(foldersPath());
+  const photos = await readPhotos();
+  const names = new Map<string, StoredFolder>();
+  const baseFolders = savedFolders === null ? defaultFolders() : savedFolders;
+
+  for (const folder of Array.isArray(baseFolders) ? baseFolders : []) {
+    const name = normalizeFolderName(folder.name);
+    if (name && !names.has(name.toLowerCase())) {
+      names.set(name.toLowerCase(), { ...folder, name });
+    }
+  }
+
+  for (const photo of photos) {
+    const name = normalizeFolderName(photo.category);
+    if (name && !names.has(name.toLowerCase())) {
+      names.set(name.toLowerCase(), {
+        id: crypto.randomUUID(),
+        name,
+        createdAt: photo.createdAt,
+      });
+    }
+  }
+
+  return Array.from(names.values());
+}
+
+export async function writeFolders(folders: StoredFolder[]) {
+  await writeJsonFile(foldersPath(), folders);
+}
+
+export async function addFolder(name: string) {
+  const normalizedName = normalizeFolderName(name);
+  if (!normalizedName) {
+    throw new Error("Название папки обязательно.");
+  }
+
+  const folders = await readFolders();
+  const existing = folders.find((folder) => folder.name.toLowerCase() === normalizedName.toLowerCase());
+  if (existing) {
+    return existing;
+  }
+
+  const folder = {
+    id: crypto.randomUUID(),
+    name: normalizedName,
+    createdAt: new Date().toISOString(),
+  };
+  await writeFolders([...folders, folder]);
+  return folder;
+}
+
+export async function addStoredPhoto(photo: StoredPhoto) {
+  const photos = await readPhotos();
+  await writePhotos([photo, ...photos]);
+}
+
+export async function findStoredPhoto(id: string) {
+  const photos = await readPhotos();
+  return photos.find((photo) => photo.id === id) ?? null;
+}
+
+export async function deleteStoredPhoto(id: string) {
+  const photos = await readPhotos();
+  const photo = photos.find((item) => item.id === id);
+
+  if (!photo) {
+    return null;
+  }
+
+  await writePhotos(photos.filter((item) => item.id !== id));
+
+  try {
+    await unlink(path.join(uploadsDir(), photo.imageKey));
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+      throw error;
+    }
+  }
+
+  return photo;
+}
+
+export async function deleteFolder(id: string) {
+  const folders = await readFolders();
+  const folder = folders.find((item) => item.id === id);
+
+  if (!folder) {
+    return null;
+  }
+
+  const photos = await readPhotos();
+  const photosToDelete = photos.filter((photo) => photo.category === folder.name);
+  const remainingPhotos = photos.filter((photo) => photo.category !== folder.name);
+  const remainingFolders = folders.filter((item) => item.id !== id);
+
+  await writePhotos(remainingPhotos);
+  await writeFolders(remainingFolders);
+
+  await Promise.all(
+    photosToDelete.map(async (photo) => {
+      try {
+        await unlink(path.join(uploadsDir(), photo.imageKey));
+      } catch (error) {
+        if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+          throw error;
+        }
+      }
+    })
+  );
+
+  return {
+    folder,
+    deletedPhotos: photosToDelete.length,
+  };
 }
 
 export function photoToResponse(photo: StoredPhoto): PhotoResponse {
@@ -107,15 +310,18 @@ export function photoToResponse(photo: StoredPhoto): PhotoResponse {
   };
 }
 
-export function toStoredPhoto(row: Record<string, unknown>): StoredPhoto {
-  return {
-    id: String(row.id),
-    title: String(row.title),
-    category: String(row.category),
-    note: String(row.note ?? ""),
-    date: String(row.date ?? ""),
-    imageKey: String(row.image_key),
-    contentType: String(row.content_type),
-    createdAt: String(row.created_at),
-  };
+export function extensionForContentType(contentType: string) {
+  if (contentType === "image/jpeg") {
+    return ".jpg";
+  }
+  if (contentType === "image/png") {
+    return ".png";
+  }
+  if (contentType === "image/webp") {
+    return ".webp";
+  }
+  if (contentType === "image/gif") {
+    return ".gif";
+  }
+  return ".img";
 }
