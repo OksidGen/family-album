@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Наши годы в кадрах",
-  description: "Закрытый семейный фотоальбом для годовщины свадьбы.",
+  description: "Закрытый семейный онлайн-альбом с любимыми фотографиями.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
