@@ -21,14 +21,6 @@ type Folder = {
 
 const ACCESS_KEY = "family-anniversary-access";
 
-const defaultFolders: Folder[] = [
-  { id: "default-1", name: "Наша история", createdAt: "" },
-  { id: "default-2", name: "Путешествия", createdAt: "" },
-  { id: "default-3", name: "Дом", createdAt: "" },
-  { id: "default-4", name: "Праздники", createdAt: "" },
-  { id: "default-5", name: "Любимые моменты", createdAt: "" },
-];
-
 const starterPhotos: Photo[] = [
   {
     id: "starter-1",
@@ -62,8 +54,8 @@ export default function Home() {
   );
   const [accessCode, setAccessCode] = useState("");
   const [activeCategory, setActiveCategory] = useState("Все");
-  const [photos, setPhotos] = useState<Photo[]>(starterPhotos);
-  const [folders, setFolders] = useState<Folder[]>(defaultFolders);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -91,13 +83,16 @@ export default function Home() {
         }
         const serverPhotos = payload.photos ?? [];
         const serverFolders = payload.folders ?? [];
-        setPhotos(serverPhotos.length > 0 ? serverPhotos : starterPhotos);
-        setFolders(serverFolders.length > 0 ? serverFolders : defaultFolders);
+        setPhotos(serverPhotos);
+        setFolders(serverFolders);
+        setActiveCategory((current) =>
+          current === "Все" || serverFolders.some((folder) => folder.name === current) ? current : "Все"
+        );
       })
       .catch(() => {
         if (isActive) {
-          setPhotos(starterPhotos);
-          setFolders(defaultFolders);
+          setPhotos([]);
+          setFolders([]);
           setMessage("Введите семейный код, чтобы открыть альбом.");
         }
       });
@@ -117,6 +112,8 @@ export default function Home() {
   }, [activeCategory, photos]);
 
   const heroPhoto = photos[0] ?? starterPhotos[0];
+  const isAlbumEmpty = photos.length === 0;
+  const isFolderListEmpty = folders.length === 0;
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -243,8 +240,12 @@ export default function Home() {
           </div>
         ) : (
           <div className="empty-state">
-            <h3>В этой папке пока нет фотографий</h3>
-            <p>Добавьте первые снимки через отдельную админ-страницу.</p>
+            <h3>{isFolderListEmpty && isAlbumEmpty ? "В альбоме пока нет папок" : "В этой папке пока нет фотографий"}</h3>
+            <p>
+              {isFolderListEmpty && isAlbumEmpty
+                ? "Создайте первую папку и загрузите фотографии на странице администратора."
+                : "Добавьте первые снимки через отдельную админ-страницу."}
+            </p>
           </div>
         )}
       </section>

@@ -36,3 +36,12 @@ test("keeps uploaded photo storage on the VPS filesystem", async () => {
   assert.match(envExample, /FAMILY_CODE=/);
   assert.match(envExample, /ADMIN_CODE=/);
 });
+
+test("does not show demo photos after the unlocked album loads empty data", async () => {
+  const page = await read("app/page.tsx");
+
+  assert.match(page, /setPhotos\(serverPhotos\)/);
+  assert.match(page, /setFolders\(serverFolders\)/);
+  assert.doesNotMatch(page, /setPhotos\(serverPhotos\.length > 0 \? serverPhotos : starterPhotos\)/);
+  assert.doesNotMatch(page, /setFolders\(serverFolders\.length > 0 \? serverFolders : defaultFolders\)/);
+});
