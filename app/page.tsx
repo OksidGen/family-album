@@ -14,8 +14,6 @@ type Photo = {
 };
 
 const ACCESS_KEY = "family-anniversary-access";
-const FAMILY_CODE = "LOVE2026";
-const ADMIN_CODE = "ALBUM2026";
 
 const defaultCategories = [
   "Наша история",
@@ -77,6 +75,11 @@ export default function Home() {
 
     fetch("/api/photos")
       .then(async (response) => {
+        if (response.status === 401) {
+          window.localStorage.removeItem(ACCESS_KEY);
+          setIsUnlocked(false);
+          throw new Error("Введите семейный код заново.");
+        }
         if (!response.ok) {
           throw new Error("Не получилось загрузить фотографии.");
         }
@@ -92,7 +95,7 @@ export default function Home() {
       .catch(() => {
         if (isActive) {
           setPhotos(starterPhotos);
-          setMessage("Пока показываю стартовые карточки. Серверный альбом недоступен.");
+          setMessage("Введите семейный код, чтобы открыть альбом.");
         }
       })
 
@@ -115,25 +118,45 @@ export default function Home() {
 
   const heroPhoto = photos[0] ?? starterPhotos[0];
 
-  function unlock(event: FormEvent<HTMLFormElement>) {
+  async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (accessCode.trim().toUpperCase() === FAMILY_CODE) {
+    const response = await fetch("/api/access", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ accessCode }),
+    });
+    const payload = (await response.json()) as { error?: string };
+
+    if (response.ok) {
       window.localStorage.setItem(ACCESS_KEY, "family");
       setIsUnlocked(true);
       setMessage("");
       return;
     }
-    setMessage("Проверьте семейный код и попробуйте еще раз.");
+
+    setMessage(payload.error ?? "Проверьте семейный код и попробуйте еще раз.");
   }
 
-  function unlockAdmin(event: FormEvent<HTMLFormElement>) {
+  async function unlockAdmin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (adminCode.trim().toUpperCase() === ADMIN_CODE) {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ adminCode }),
+    });
+    const payload = (await response.json()) as { error?: string };
+
+    if (response.ok) {
       setIsAdmin(true);
       setMessage("Админ-панель открыта.");
       return;
     }
-    setMessage("Пароль администратора не подошел.");
+
+    setMessage(payload.error ?? "Пароль администратора не подошел.");
   }
 
   function handleFile(event: ChangeEvent<HTMLInputElement>) {
@@ -234,7 +257,6 @@ export default function Home() {
                 />
                 <button type="submit">Открыть</button>
               </div>
-              <p className="hint">Для демо: LOVE2026</p>
               {message && <p className="form-message">{message}</p>}
             </form>
           </div>
@@ -343,7 +365,6 @@ export default function Home() {
               />
               <button type="submit">Войти</button>
             </div>
-            <p className="hint">Для демо: ALBUM2026</p>
             {message && <p className="form-message">{message}</p>}
           </form>
         ) : (

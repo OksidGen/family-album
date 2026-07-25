@@ -12,6 +12,8 @@ export type StoredPhoto = {
 };
 
 const ADMIN_CODE = "ALBUM2026";
+const FAMILY_CODE = "LOVE2026";
+const FAMILY_ACCESS_COOKIE = "family_album_access";
 
 const createPhotosTable = `
 CREATE TABLE IF NOT EXISTS photos (
@@ -48,6 +50,30 @@ export function assertAdminCode(value: FormDataEntryValue | string | null) {
   }
 
   return null;
+}
+
+export function assertFamilyAccess(request: Request) {
+  const cookie = request.headers.get("Cookie") ?? "";
+  if (cookie.split(";").some((item) => item.trim() === `${FAMILY_ACCESS_COOKIE}=granted`)) {
+    return null;
+  }
+
+  return Response.json({ error: "Нужен семейный код." }, { status: 401 });
+}
+
+export function createFamilyAccessResponse(value: string | null) {
+  if (String(value ?? "").trim().toUpperCase() !== FAMILY_CODE) {
+    return Response.json({ error: "Проверьте семейный код и попробуйте еще раз." }, { status: 401 });
+  }
+
+  return Response.json(
+    { ok: true },
+    {
+      headers: {
+        "Set-Cookie": `${FAMILY_ACCESS_COOKIE}=granted; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+      },
+    }
+  );
 }
 
 export function getBindings() {

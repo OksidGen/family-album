@@ -1,4 +1,5 @@
 import {
+  assertFamilyAccess,
   assertAdminCode,
   ensurePhotosSchema,
   getBindings,
@@ -14,8 +15,13 @@ function cleanText(value: FormDataEntryValue | null, fallback = "") {
   return String(value ?? fallback).trim();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const unauthorized = assertFamilyAccess(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
     const { db } = getBindings();
     await ensurePhotosSchema(db);
 

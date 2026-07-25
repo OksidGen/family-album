@@ -1,4 +1,4 @@
-import { ensurePhotosSchema, getBindings, toStoredPhoto } from "../../storage";
+import { assertFamilyAccess, ensurePhotosSchema, getBindings, toStoredPhoto } from "../../storage";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +8,13 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
+    const unauthorized = assertFamilyAccess(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
     const { id } = await context.params;
     const { db, bucket } = getBindings();
     await ensurePhotosSchema(db);
