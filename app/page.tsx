@@ -10,9 +10,9 @@ type Photo = {
   note: string;
   date: string;
   src: string;
+  createdAt?: string;
 };
 
-const STORAGE_KEY = "family-anniversary-gallery";
 const ACCESS_KEY = "family-anniversary-access";
 const FAMILY_CODE = "LOVE2026";
 const ADMIN_CODE = "ALBUM2026";
@@ -52,33 +52,6 @@ const starterPhotos: Photo[] = [
   },
 ];
 
-function readPhotos(): Photo[] {
-  if (typeof window === "undefined") {
-    return starterPhotos;
-  }
-
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    return starterPhotos;
-  }
-
-  try {
-    const parsed = JSON.parse(stored) as Photo[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : starterPhotos;
-  } catch {
-    return starterPhotos;
-  }
-}
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function Home() {
   const [isUnlocked, setIsUnlocked] = useState(
     () => typeof window !== "undefined" && window.localStorage.getItem(ACCESS_KEY) === "family"
@@ -87,7 +60,7 @@ export default function Home() {
   const [accessCode, setAccessCode] = useState("");
   const [adminCode, setAdminCode] = useState("");
   const [activeCategory, setActiveCategory] = useState("Все");
-  const [photos, setPhotos] = useState<Photo[]>(readPhotos);
+  const [photos, setPhotos] = useState<Photo[]>(starterPhotos);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState(defaultCategories[0]);
   const [uploadNote, setUploadNote] = useState("");
@@ -96,10 +69,37 @@ export default function Home() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
+    if (!isUnlocked) {
+      return;
     }
-  }, [photos]);
+
+    let isActive = true;
+
+    fetch("/api/photos")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Не получилось загрузить фотографии.");
+        }
+        return (await response.json()) as { photos?: Photo[] };
+      })
+      .then((payload) => {
+        if (!isActive) {
+          return;
+        }
+        const serverPhotos = payload.photos ?? [];
+        setPhotos(serverPhotos.length > 0 ? serverPhotos : starterPhotos);
+      })
+      .catch(() => {
+        if (isActive) {
+          setPhotos(starterPhotos);
+          setMessage("Пока показываю стартовые карточки. Серверный альбом недоступен.");
+        }
+      })
+
+    return () => {
+      isActive = false;
+    };
+  }, [isUnlocked]);
 
   const categories = useMemo(() => {
     const names = new Set(["Все", ...defaultCategories, ...photos.map((photo) => photo.category)]);
@@ -147,17 +147,29 @@ export default function Home() {
       return;
     }
 
-    const src = await fileToDataUrl(selectedFile);
-    const nextPhoto: Photo = {
-      id: crypto.randomUUID(),
-      title: uploadTitle.trim() || selectedFile.name.replace(/\.[^/.]+$/, ""),
-      category: uploadCategory.trim() || "Любимые моменты",
-      note: uploadNote.trim(),
-      date: uploadDate.trim(),
-      src,
-    };
+    const formData = new FormData();
+    formData.set("adminCode", adminCode);
+    formData.set("title", uploadTitle);
+    formData.set("category", uploadCategory);
+    formData.set("note", uploadNote);
+    formData.set("date", uploadDate);
+    formData.set("file", selectedFile);
 
-    setPhotos((current) => [nextPhoto, ...current]);
+    const response = await fetch("/api/photos", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = (await response.json()) as { photo?: Photo; error?: string };
+
+    if (!response.ok || !payload.photo) {
+      setMessage(payload.error ?? "Не получилось загрузить фотографию.");
+      return;
+    }
+
+    setPhotos((current) => {
+      const currentServerPhotos = current.filter((photo) => !photo.id.startsWith("starter-"));
+      return [payload.photo!, ...currentServerPhotos];
+    });
     setUploadTitle("");
     setUploadNote("");
     setUploadDate("");
@@ -166,13 +178,34 @@ export default function Home() {
     event.currentTarget.reset();
   }
 
-  function deletePhoto(id: string) {
-    setPhotos((current) => current.filter((photo) => photo.id !== id));
+  async function deletePhoto(id: string) {
+    if (id.startsWith("starter-")) {
+      return;
+    }
+
+    const response = await fetch(`/api/photos/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ adminCode }),
+    });
+    const payload = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setMessage(payload.error ?? "Не получилось удалить фотографию.");
+      return;
+    }
+
+    setPhotos((current) => {
+      const nextPhotos = current.filter((photo) => photo.id !== id);
+      return nextPhotos.length > 0 ? nextPhotos : starterPhotos;
+    });
   }
 
-  function resetStarter() {
+  function showStarter() {
     setPhotos(starterPhotos);
-    setMessage("Вернул стартовые карточки.");
+    setMessage("Показываю стартовые карточки для пустого альбома.");
   }
 
   if (!isUnlocked) {
@@ -275,7 +308,7 @@ export default function Home() {
                 <h3>{photo.title}</h3>
                 {photo.date && <p className="photo-date">{photo.date}</p>}
                 {photo.note && <p>{photo.note}</p>}
-                {isAdmin && (
+                {isAdmin && !photo.id.startsWith("starter-") && (
                   <button type="button" className="danger-button" onClick={() => deletePhoto(photo.id)}>
                     Удалить
                   </button>
@@ -292,7 +325,8 @@ export default function Home() {
           <h2>Добавление фотографий</h2>
           <p>
             Загрузите снимок, выберите раздел и добавьте короткую подпись. В
-            текущем MVP фотографии сохраняются на этом устройстве.
+            рабочей версии фотографии сохраняются на сервере и будут видны всем,
+            кто откроет альбом по QR и введет семейный код.
           </p>
         </div>
 
@@ -342,8 +376,8 @@ export default function Home() {
             </label>
             <div className="admin-actions">
               <button type="submit">Добавить фото</button>
-              <button type="button" className="ghost-button" onClick={resetStarter}>
-                Сбросить демо
+              <button type="button" className="ghost-button" onClick={showStarter}>
+                Показать заглушки
               </button>
             </div>
             {message && <p className="form-message">{message}</p>}
