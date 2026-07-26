@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { ChangeEvent, FormEvent, PointerEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 
 type Photo = {
   id: string;
@@ -22,8 +22,6 @@ type Folder = {
 
 type AlbumSettings = {
   coverPhotoId: string | null;
-  coverPositionX: number;
-  coverPositionY: number;
 };
 
 export default function AdminPage() {
@@ -32,9 +30,6 @@ export default function AdminPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
-  const [coverPositionX, setCoverPositionX] = useState(50);
-  const [coverPositionY, setCoverPositionY] = useState(50);
-  const [isDraggingCoverPoint, setIsDraggingCoverPoint] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadNote, setUploadNote] = useState("");
@@ -72,8 +67,6 @@ export default function AdminPage() {
     setPhotos(payload.photos ?? []);
     setFolders(nextFolders);
     setCoverPhotoId(typeof payload.settings?.coverPhotoId === "string" ? payload.settings.coverPhotoId : null);
-    setCoverPositionX(typeof payload.settings?.coverPositionX === "number" ? payload.settings.coverPositionX : 50);
-    setCoverPositionY(typeof payload.settings?.coverPositionY === "number" ? payload.settings.coverPositionY : 50);
     setUploadCategory((current) =>
       nextFolders.some((folder) => folder.name === current) ? current : nextFolders[0]?.name || ""
     );
@@ -154,23 +147,13 @@ export default function AdminPage() {
     await loadAdminState();
   }
 
-  async function makeCoverPhoto(
-    id: string,
-    nextPositionX = 50,
-    nextPositionY = 50,
-    successMessage = "Обложка альбома обновлена."
-  ) {
+  async function makeCoverPhoto(id: string) {
     const response = await fetch("/api/settings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        adminCode,
-        coverPhotoId: id,
-        coverPositionX: nextPositionX,
-        coverPositionY: nextPositionY,
-      }),
+      body: JSON.stringify({ adminCode, coverPhotoId: id }),
     });
     const payload = (await response.json()) as { settings?: AlbumSettings; error?: string };
 
@@ -180,55 +163,7 @@ export default function AdminPage() {
     }
 
     setCoverPhotoId(payload.settings.coverPhotoId);
-    setCoverPositionX(payload.settings.coverPositionX);
-    setCoverPositionY(payload.settings.coverPositionY);
-    setMessage(successMessage);
-  }
-
-  async function saveCoverCenter(id: string) {
-    await makeCoverPhoto(id, coverPositionX, coverPositionY, "Центрирование обложки сохранено.");
-  }
-
-  function coverPositionFromPointer(event: PointerEvent<HTMLButtonElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return {
-      x: Math.round(Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100))),
-      y: Math.round(Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100))),
-    };
-  }
-
-  function updateCoverPoint(event: PointerEvent<HTMLButtonElement>) {
-    const position = coverPositionFromPointer(event);
-    setCoverPositionX(position.x);
-    setCoverPositionY(position.y);
-    return position;
-  }
-
-  function startCoverDrag(event: PointerEvent<HTMLButtonElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDraggingCoverPoint(true);
-    updateCoverPoint(event);
-  }
-
-  function moveCoverPoint(event: PointerEvent<HTMLButtonElement>) {
-    if (isDraggingCoverPoint) {
-      updateCoverPoint(event);
-    }
-  }
-
-  function finishCoverDrag(event: PointerEvent<HTMLButtonElement>) {
-    updateCoverPoint(event);
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setIsDraggingCoverPoint(false);
-  }
-
-  function cancelCoverDrag(event: PointerEvent<HTMLButtonElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setIsDraggingCoverPoint(false);
+    setMessage("Обложка альбома обновлена.");
   }
 
   async function addPhotos(event: FormEvent<HTMLFormElement>) {
@@ -307,8 +242,6 @@ export default function AdminPage() {
     setPhotos((current) => current.filter((photo) => photo.id !== id));
     if (coverPhotoId === id) {
       setCoverPhotoId(null);
-      setCoverPositionX(50);
-      setCoverPositionY(50);
     }
     setMessage("Фотография удалена.");
   }
@@ -478,56 +411,6 @@ export default function AdminPage() {
                       Удалить
                     </button>
                   </div>
-                  {coverPhotoId === photo.id && (
-                    <div className="cover-picker">
-                      <div>
-                        <div className="cover-picker-heading">
-                          <strong>Редактирование центра обложки</strong>
-                          <button type="button" className="ghost-button" onClick={() => saveCoverCenter(photo.id)}>
-                            Сохранить центрирование
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          className="cover-picker-frame"
-                          aria-label="Перетащить центр обложки"
-                          onPointerDown={startCoverDrag}
-                          onPointerMove={moveCoverPoint}
-                          onPointerUp={finishCoverDrag}
-                          onPointerCancel={cancelCoverDrag}
-                        >
-                          <img
-                            src={photo.src}
-                            alt=""
-                            style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
-                          />
-                          <span
-                            className="cover-marker"
-                            style={{ left: `${coverPositionX}%`, top: `${coverPositionY}%` }}
-                          />
-                        </button>
-                        <p>Перетащите точку туда, где должен быть центр обложки.</p>
-                      </div>
-                      <div className="cover-previews" aria-label="Предпросмотр обложки">
-                        <div className="cover-preview cover-preview-desktop">
-                          <span>Компьютер</span>
-                          <img
-                            src={photo.src}
-                            alt=""
-                            style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
-                          />
-                        </div>
-                        <div className="cover-preview cover-preview-phone">
-                          <span>Телефон</span>
-                          <img
-                            src={photo.src}
-                            alt=""
-                            style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </article>
               ))}
             </div>

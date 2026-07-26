@@ -7,8 +7,6 @@ export async function POST(request: Request) {
     const payload = (await request.json()) as {
       adminCode?: string;
       coverPhotoId?: string;
-      coverPositionX?: number;
-      coverPositionY?: number;
     };
     const unauthorized = assertAdminCode(payload.adminCode ?? null);
     if (unauthorized) {
@@ -19,7 +17,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Выберите фотографию для обложки." }, { status: 400 });
     }
 
-    const settings = await setCoverPhoto(payload.coverPhotoId, payload.coverPositionX, payload.coverPositionY);
+    const settings = await setCoverPhoto(payload.coverPhotoId);
     return Response.json({ settings });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

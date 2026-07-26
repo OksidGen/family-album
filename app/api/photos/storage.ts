@@ -20,8 +20,6 @@ export type StoredPhoto = {
 
 export type AlbumSettings = {
   coverPhotoId: string | null;
-  coverPositionX: number;
-  coverPositionY: number;
 };
 
 export type PhotoResponse = {
@@ -137,10 +135,6 @@ function normalizeFolderName(name: string) {
   return name.trim().replace(/\s+/g, " ");
 }
 
-function normalizePercent(value: unknown, fallback = 50) {
-  return typeof value === "number" && Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : fallback;
-}
-
 function defaultFolders(): StoredFolder[] {
   const now = new Date().toISOString();
   return DEFAULT_FOLDERS.map((name, index) => ({
@@ -199,8 +193,6 @@ export async function readAlbumSettings(): Promise<AlbumSettings> {
   const settings = await readJsonFile<Partial<AlbumSettings>>(settingsPath(), {});
   return {
     coverPhotoId: typeof settings.coverPhotoId === "string" ? settings.coverPhotoId : null,
-    coverPositionX: normalizePercent(settings.coverPositionX),
-    coverPositionY: normalizePercent(settings.coverPositionY),
   };
 }
 
@@ -272,23 +264,14 @@ export async function findStoredPhoto(id: string) {
   return photos.find((photo) => photo.id === id) ?? null;
 }
 
-export async function setCoverPhoto(id: string, coverPositionX?: number, coverPositionY?: number) {
+export async function setCoverPhoto(id: string) {
   const photo = await findStoredPhoto(id);
   if (!photo) {
     throw new Error("Фотография не найдена.");
   }
 
-  const currentSettings = await readAlbumSettings();
   const settings = {
     coverPhotoId: photo.id,
-    coverPositionX: normalizePercent(
-      coverPositionX,
-      currentSettings.coverPhotoId === photo.id ? currentSettings.coverPositionX : 50
-    ),
-    coverPositionY: normalizePercent(
-      coverPositionY,
-      currentSettings.coverPhotoId === photo.id ? currentSettings.coverPositionY : 50
-    ),
   };
   await writeAlbumSettings(settings);
   return settings;
@@ -301,7 +284,7 @@ async function clearCoverIfNeeded(deletedPhotoIds: string[]) {
 
   const settings = await readAlbumSettings();
   if (settings.coverPhotoId && deletedPhotoIds.includes(settings.coverPhotoId)) {
-    await writeAlbumSettings({ coverPhotoId: null, coverPositionX: 50, coverPositionY: 50 });
+    await writeAlbumSettings({ coverPhotoId: null });
   }
 }
 

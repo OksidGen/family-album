@@ -21,8 +21,6 @@ type Folder = {
 
 type AlbumSettings = {
   coverPhotoId: string | null;
-  coverPositionX: number;
-  coverPositionY: number;
 };
 
 const ACCESS_KEY = "family-anniversary-access";
@@ -62,11 +60,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Все");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [settings, setSettings] = useState<AlbumSettings>({
-    coverPhotoId: null,
-    coverPositionX: 50,
-    coverPositionY: 50,
-  });
+  const [settings, setSettings] = useState<AlbumSettings>({ coverPhotoId: null });
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isEasterEggOpen, setIsEasterEggOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -100,8 +94,6 @@ export default function Home() {
         setFolders(serverFolders);
         setSettings({
           coverPhotoId: typeof payload.settings?.coverPhotoId === "string" ? payload.settings.coverPhotoId : null,
-          coverPositionX: typeof payload.settings?.coverPositionX === "number" ? payload.settings.coverPositionX : 50,
-          coverPositionY: typeof payload.settings?.coverPositionY === "number" ? payload.settings.coverPositionY : 50,
         });
         setActiveCategory((current) =>
           current === "Все" || serverFolders.some((folder) => folder.name === current) ? current : "Все"
@@ -111,7 +103,7 @@ export default function Home() {
         if (isActive) {
           setPhotos([]);
           setFolders([]);
-          setSettings({ coverPhotoId: null, coverPositionX: 50, coverPositionY: 50 });
+          setSettings({ coverPhotoId: null });
           setMessage("Введите семейный код, чтобы открыть альбом.");
         }
       });
@@ -163,7 +155,6 @@ export default function Home() {
 
   const coverPhoto = settings.coverPhotoId ? photos.find((photo) => photo.id === settings.coverPhotoId) : null;
   const heroPhoto = coverPhoto ?? photos[0] ?? starterPhotos[0];
-  const heroObjectPosition = `${settings.coverPositionX}% ${settings.coverPositionY}%`;
   const lightboxPosition = visibleLightboxIndex === null ? 0 : visibleLightboxIndex + 1;
   const isAlbumEmpty = photos.length === 0;
   const isFolderListEmpty = folders.length === 0;
@@ -237,7 +228,7 @@ export default function Home() {
     <main className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
       <section className="album-hero">
         <div className="hero-image">
-          <img src={heroPhoto.src} alt={heroPhoto.title} style={{ objectPosition: heroObjectPosition }} />
+          <img src={heroPhoto.src} alt={heroPhoto.title} />
         </div>
         <div className="hero-copy">
           <p className="eyebrow">Семейный онлайн-альбом</p>

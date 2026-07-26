@@ -86,7 +86,7 @@ img {
   width: 100%;
   height: 100%;
   max-height: 100vh;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .login-panel {
@@ -273,6 +273,14 @@ button:disabled:hover {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
   min-height: min(820px, 92vh);
+}
+
+.hero-image {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 250, 242, 0.16), transparent 32%),
+    var(--ink);
 }
 
 .album-hero h1 {
@@ -821,129 +829,6 @@ button:disabled:hover {
   padding-inline: 14px;
 }
 
-.cover-picker {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.48fr);
-  grid-column: 1 / -1;
-  gap: 14px;
-  border-top: 1px solid rgba(223, 209, 191, 0.78);
-  padding-top: 12px;
-}
-
-.cover-picker-heading {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.cover-picker-heading strong {
-  color: var(--ink);
-}
-
-.cover-picker-heading button {
-  min-height: 38px;
-  padding-inline: 14px;
-}
-
-.cover-picker-frame {
-  position: relative;
-  display: block;
-  width: 100%;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(70, 111, 97, 0.42);
-  border-radius: 8px;
-  background: transparent;
-  padding: 0;
-  aspect-ratio: 16 / 9;
-  cursor: grab;
-  font-size: 0;
-  line-height: 0;
-  touch-action: none;
-  user-select: none;
-}
-
-.cover-picker-frame:hover {
-  background: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.cover-picker-frame:active {
-  cursor: grabbing;
-}
-
-.cover-picker-frame img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  aspect-ratio: auto;
-  border-radius: 0;
-  object-fit: cover;
-}
-
-.cover-marker {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--cream);
-  border-radius: 999px;
-  background: var(--rose);
-  box-shadow: 0 8px 22px rgba(48, 40, 32, 0.24);
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-}
-
-.cover-picker p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
-}
-
-.cover-previews {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.cover-preview {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.cover-preview span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 720;
-}
-
-.cover-preview img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 1px solid rgba(223, 209, 191, 0.82);
-  border-radius: 8px;
-  object-fit: cover;
-  box-shadow: 0 12px 28px rgba(64, 43, 31, 0.12);
-}
-
-.cover-preview-desktop img {
-  aspect-ratio: 16 / 9;
-}
-
-.cover-preview-phone {
-  width: 74px;
-}
-
-.cover-preview-phone img {
-  aspect-ratio: 9 / 16;
-}
-
 @media (max-width: 980px) {
   .login-shell,
   .album-hero,
@@ -955,8 +840,13 @@ button:disabled:hover {
     min-height: 42vh;
   }
 
+  .hero-image {
+    min-height: min(54vh, 560px);
+  }
+
   .hero-image img {
-    height: min(54vh, 560px);
+    height: auto;
+    max-height: min(54vh, 560px);
   }
 
   .login-panel,
@@ -1027,23 +917,6 @@ button:disabled:hover {
 
   .admin-photo-actions button {
     width: 100%;
-  }
-
-  .cover-picker,
-  .cover-previews {
-    grid-template-columns: 1fr;
-  }
-
-  .cover-picker-heading {
-    display: grid;
-  }
-
-  .cover-picker-heading button {
-    width: 100%;
-  }
-
-  .cover-preview-phone {
-    width: min(100%, 150px);
   }
 
   .photo-lightbox {
