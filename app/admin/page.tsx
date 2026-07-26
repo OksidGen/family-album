@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, MouseEvent, useMemo, useState } from "react";
 
 type Photo = {
   id: string;
@@ -22,6 +22,8 @@ type Folder = {
 
 type AlbumSettings = {
   coverPhotoId: string | null;
+  coverPositionX: number;
+  coverPositionY: number;
 };
 
 export default function AdminPage() {
@@ -30,6 +32,8 @@ export default function AdminPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
+  const [coverPositionX, setCoverPositionX] = useState(50);
+  const [coverPositionY, setCoverPositionY] = useState(50);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadNote, setUploadNote] = useState("");
@@ -67,6 +71,8 @@ export default function AdminPage() {
     setPhotos(payload.photos ?? []);
     setFolders(nextFolders);
     setCoverPhotoId(typeof payload.settings?.coverPhotoId === "string" ? payload.settings.coverPhotoId : null);
+    setCoverPositionX(typeof payload.settings?.coverPositionX === "number" ? payload.settings.coverPositionX : 50);
+    setCoverPositionY(typeof payload.settings?.coverPositionY === "number" ? payload.settings.coverPositionY : 50);
     setUploadCategory((current) =>
       nextFolders.some((folder) => folder.name === current) ? current : nextFolders[0]?.name || ""
     );
@@ -147,13 +153,18 @@ export default function AdminPage() {
     await loadAdminState();
   }
 
-  async function makeCoverPhoto(id: string) {
+  async function makeCoverPhoto(id: string, nextPositionX = 50, nextPositionY = 50) {
     const response = await fetch("/api/settings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ adminCode, coverPhotoId: id }),
+      body: JSON.stringify({
+        adminCode,
+        coverPhotoId: id,
+        coverPositionX: nextPositionX,
+        coverPositionY: nextPositionY,
+      }),
     });
     const payload = (await response.json()) as { settings?: AlbumSettings; error?: string };
 
@@ -163,7 +174,16 @@ export default function AdminPage() {
     }
 
     setCoverPhotoId(payload.settings.coverPhotoId);
+    setCoverPositionX(payload.settings.coverPositionX);
+    setCoverPositionY(payload.settings.coverPositionY);
     setMessage("Обложка альбома обновлена.");
+  }
+
+  async function selectCoverArea(event: MouseEvent<HTMLButtonElement>, id: string) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const nextPositionX = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+    const nextPositionY = Math.round(((event.clientY - rect.top) / rect.height) * 100);
+    await makeCoverPhoto(id, nextPositionX, nextPositionY);
   }
 
   async function addPhotos(event: FormEvent<HTMLFormElement>) {
@@ -242,6 +262,8 @@ export default function AdminPage() {
     setPhotos((current) => current.filter((photo) => photo.id !== id));
     if (coverPhotoId === id) {
       setCoverPhotoId(null);
+      setCoverPositionX(50);
+      setCoverPositionY(50);
     }
     setMessage("Фотография удалена.");
   }
@@ -411,6 +433,27 @@ export default function AdminPage() {
                       Удалить
                     </button>
                   </div>
+                  {coverPhotoId === photo.id && (
+                    <div className="cover-picker">
+                      <button
+                        type="button"
+                        className="cover-picker-frame"
+                        aria-label="Выбрать область обложки"
+                        onClick={(event) => selectCoverArea(event, photo.id)}
+                      >
+                        <img
+                          src={photo.src}
+                          alt=""
+                          style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
+                        />
+                        <span
+                          className="cover-marker"
+                          style={{ left: `${coverPositionX}%`, top: `${coverPositionY}%` }}
+                        />
+                      </button>
+                      <p>Нажмите на область фотографии, которая должна быть центром обложки.</p>
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

@@ -66,18 +66,26 @@ test("admin can choose the album cover photo", async () => {
   const storage = await read("app/api/photos/storage.ts");
   const photosRoute = await read("app/api/photos/route.ts");
   const settingsRoute = await read("app/api/settings/route.ts");
+  const styles = await read("app/globals.css");
   const adminPage = await read("app/admin/page.tsx");
   const page = await read("app/page.tsx");
 
   assert.match(storage, /settings\.json/);
   assert.match(storage, /readAlbumSettings/);
   assert.match(storage, /setCoverPhoto/);
+  assert.match(storage, /coverPositionX/);
+  assert.match(storage, /coverPositionY/);
   assert.match(photosRoute, /settings/);
   assert.match(settingsRoute, /coverPhotoId/);
+  assert.match(settingsRoute, /coverPositionX/);
   assert.match(adminPage, /Сделать обложкой/);
   assert.match(adminPage, /На обложке/);
+  assert.match(adminPage, /Выбрать область обложки/);
   assert.match(page, /settings\.coverPhotoId/);
+  assert.match(page, /objectPosition: heroObjectPosition/);
   assert.match(page, /coverPhoto \?\? photos\[0\]/);
+  assert.match(styles, /max-height: 100vh/);
+  assert.match(styles, /cover-picker-frame/);
 });
 
 test("album gallery preserves photo proportions in a masonry layout", async () => {
