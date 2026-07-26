@@ -53,3 +53,11 @@ test("admin upload form supports selecting multiple photos", async () => {
   assert.match(adminPage, /async function addPhotos/);
   assert.match(adminPage, /multiple onChange=\{handleFile\}/);
 });
+
+test("main page includes the private easter egg after authorization", async () => {
+  const page = await read("app/page.tsx");
+
+  assert.match(page, /isEasterEggOpen/);
+  assert.match(page, /Маленькая мысль/);
+  assert.match(page, /Каковы были шансы\?/);
+});

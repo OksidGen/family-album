@@ -221,16 +221,23 @@ button:hover,
 }
 
 .secondary-link,
-.ghost-button {
+.ghost-button,
+.secret-button {
   border: 1px solid var(--line);
   background: transparent !important;
   color: var(--ink) !important;
 }
 
 .secondary-link:hover,
-.ghost-button:hover {
+.ghost-button:hover,
+.secret-button:hover {
   border-color: var(--ink);
   background: rgba(255, 250, 242, 0.72) !important;
+}
+
+.secret-button {
+  border-color: rgba(201, 111, 91, 0.42);
+  background: rgba(255, 250, 242, 0.64) !important;
 }
 
 .hint,
@@ -270,6 +277,44 @@ button:hover,
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 16px;
+}
+
+.secret-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(48, 40, 32, 0.38);
+  padding: 18px;
+}
+
+.secret-modal {
+  width: min(680px, 100%);
+  max-height: min(760px, 92vh);
+  overflow: auto;
+  border: 1px solid rgba(223, 209, 191, 0.96);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(201, 111, 91, 0.13), transparent 28%),
+    var(--cream);
+  box-shadow: var(--shadow);
+  padding: clamp(24px, 5vw, 44px);
+}
+
+.secret-modal h2 {
+  margin-bottom: 18px;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+}
+
+.secret-modal p {
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.12rem);
+  line-height: 1.75;
+}
+
+.secret-modal button {
+  margin-top: 10px;
 }
 
 .memory-strip {

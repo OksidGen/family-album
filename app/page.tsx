@@ -56,6 +56,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Все");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [isEasterEggOpen, setIsEasterEggOpen] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -186,9 +187,46 @@ export default function Home() {
           </p>
           <div className="hero-actions">
             <a href="#gallery">Смотреть альбом</a>
+            <button type="button" className="secret-button" onClick={() => setIsEasterEggOpen(true)}>
+              Маленькая мысль
+            </button>
           </div>
         </div>
       </section>
+
+      {isEasterEggOpen && (
+        <div className="secret-modal-backdrop" role="presentation" onClick={() => setIsEasterEggOpen(false)}>
+          <section
+            className="secret-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="secret-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="eyebrow">Только для тебя</p>
+            <h2 id="secret-title">Каковы были шансы?</h2>
+            <p>
+              Ты знала, что если бы гравитация была чуть сильнее, то вселенная
+              схлопнулась бы в шар? А если бы гравитация была чуть слабее, то
+              вселенная разлетелась бы в разные стороны, и не было бы ни звезд,
+              ни планет.
+            </p>
+            <p>
+              Сила гравитации велика настолько, насколько нужно. А если бы
+              электромагнитные силы не составляли 1% от сильного взаимодействия,
+              то жизни бы не существовало. Какова вероятность того, что так
+              сложилось само собой?
+            </p>
+            <p>
+              На нашей планете 8 миллиардов людей, а мне попалась идеальная
+              жена. Каковы были шансы?
+            </p>
+            <button type="button" onClick={() => setIsEasterEggOpen(false)}>
+              Закрыть
+            </button>
+          </section>
+        </div>
+      )}
 
       <section className="memory-strip" aria-label="Статистика альбома">
         <div>
