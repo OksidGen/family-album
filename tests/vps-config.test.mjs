@@ -81,6 +81,8 @@ test("admin can choose the album cover photo", async () => {
   assert.match(page, /coverPhoto \?\? photos\[0\]/);
   assert.match(styles, /max-height: 100vh/);
   assert.match(styles, /object-fit: contain/);
+  assert.match(styles, /\.hero-image::after\s*{[^}]*display: none/);
+  assert.doesNotMatch(styles.match(/\.hero-image\s*{[^}]*}/)?.[0] ?? "", /var\(--ink\)/);
   assert.doesNotMatch(storage, /coverPositionX|coverPositionY|normalizePercent/);
   assert.doesNotMatch(settingsRoute, /coverPositionX|coverPositionY/);
   assert.doesNotMatch(adminPage, /центрирование|Перетащить центр обложки|cover-picker|onPointer/);

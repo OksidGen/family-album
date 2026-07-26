@@ -279,8 +279,12 @@ button:disabled:hover {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 20% 20%, rgba(255, 250, 242, 0.16), transparent 32%),
-    var(--ink);
+    radial-gradient(circle at 16% 20%, rgba(201, 111, 91, 0.1), transparent 30%),
+    linear-gradient(180deg, var(--paper), var(--cream));
+}
+
+.hero-image::after {
+  display: none;
 }
 
 .album-hero h1 {
