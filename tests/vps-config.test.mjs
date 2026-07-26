@@ -80,12 +80,17 @@ test("admin can choose the album cover photo", async () => {
   assert.match(settingsRoute, /coverPositionX/);
   assert.match(adminPage, /Сделать обложкой/);
   assert.match(adminPage, /На обложке/);
-  assert.match(adminPage, /Выбрать область обложки/);
+  assert.match(adminPage, /Перетащить центр обложки/);
+  assert.match(adminPage, /onPointerDown/);
+  assert.match(adminPage, /onPointerMove/);
+  assert.match(adminPage, /onPointerUp/);
   assert.match(page, /settings\.coverPhotoId/);
   assert.match(page, /objectPosition: heroObjectPosition/);
   assert.match(page, /coverPhoto \?\? photos\[0\]/);
   assert.match(styles, /max-height: 100vh/);
   assert.match(styles, /cover-picker-frame/);
+  assert.match(styles, /touch-action: none/);
+  assert.match(styles, /background: transparent/);
 });
 
 test("album gallery preserves photo proportions in a masonry layout", async () => {

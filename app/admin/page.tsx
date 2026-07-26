@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { ChangeEvent, FormEvent, MouseEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, PointerEvent, useMemo, useState } from "react";
 
 type Photo = {
   id: string;
@@ -34,6 +34,7 @@ export default function AdminPage() {
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [coverPositionX, setCoverPositionX] = useState(50);
   const [coverPositionY, setCoverPositionY] = useState(50);
+  const [isDraggingCoverPoint, setIsDraggingCoverPoint] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadNote, setUploadNote] = useState("");
@@ -179,11 +180,47 @@ export default function AdminPage() {
     setMessage("Обложка альбома обновлена.");
   }
 
-  async function selectCoverArea(event: MouseEvent<HTMLButtonElement>, id: string) {
+  function coverPositionFromPointer(event: PointerEvent<HTMLButtonElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    const nextPositionX = Math.round(((event.clientX - rect.left) / rect.width) * 100);
-    const nextPositionY = Math.round(((event.clientY - rect.top) / rect.height) * 100);
-    await makeCoverPhoto(id, nextPositionX, nextPositionY);
+    return {
+      x: Math.round(Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100))),
+      y: Math.round(Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100))),
+    };
+  }
+
+  function updateCoverPoint(event: PointerEvent<HTMLButtonElement>) {
+    const position = coverPositionFromPointer(event);
+    setCoverPositionX(position.x);
+    setCoverPositionY(position.y);
+    return position;
+  }
+
+  function startCoverDrag(event: PointerEvent<HTMLButtonElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsDraggingCoverPoint(true);
+    updateCoverPoint(event);
+  }
+
+  function moveCoverPoint(event: PointerEvent<HTMLButtonElement>) {
+    if (isDraggingCoverPoint) {
+      updateCoverPoint(event);
+    }
+  }
+
+  async function finishCoverDrag(event: PointerEvent<HTMLButtonElement>, id: string) {
+    const position = updateCoverPoint(event);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsDraggingCoverPoint(false);
+    await makeCoverPhoto(id, position.x, position.y);
+  }
+
+  function cancelCoverDrag(event: PointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsDraggingCoverPoint(false);
   }
 
   async function addPhotos(event: FormEvent<HTMLFormElement>) {
@@ -438,8 +475,11 @@ export default function AdminPage() {
                       <button
                         type="button"
                         className="cover-picker-frame"
-                        aria-label="Выбрать область обложки"
-                        onClick={(event) => selectCoverArea(event, photo.id)}
+                        aria-label="Перетащить центр обложки"
+                        onPointerDown={startCoverDrag}
+                        onPointerMove={moveCoverPoint}
+                        onPointerUp={(event) => finishCoverDrag(event, photo.id)}
+                        onPointerCancel={cancelCoverDrag}
                       >
                         <img
                           src={photo.src}
@@ -451,7 +491,7 @@ export default function AdminPage() {
                           style={{ left: `${coverPositionX}%`, top: `${coverPositionY}%` }}
                         />
                       </button>
-                      <p>Нажмите на область фотографии, которая должна быть центром обложки.</p>
+                      <p>Перетащите точку туда, где должен быть центр обложки.</p>
                     </div>
                   )}
                 </article>
