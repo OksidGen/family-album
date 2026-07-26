@@ -102,6 +102,23 @@ test("album gallery preserves photo proportions in a masonry layout", async () =
   assert.doesNotMatch(photoImageRule, /object-fit: cover|aspect-ratio/);
 });
 
+test("album photos open in a filtered fullscreen lightbox", async () => {
+  const page = await read("app/page.tsx");
+  const styles = await read("app/globals.css");
+
+  assert.match(page, /lightboxIndex/);
+  assert.match(page, /setLightboxIndex\(index\)/);
+  assert.match(page, /visibleLightboxIndex/);
+  assert.match(page, /filteredPhotos\[visibleLightboxIndex\]/);
+  assert.match(page, /ArrowLeft/);
+  assert.match(page, /ArrowRight/);
+  assert.match(page, /Escape/);
+  assert.match(page, /Просмотр фотографии/);
+  assert.match(styles, /\.photo-lightbox/);
+  assert.match(styles, /position: fixed/);
+  assert.match(styles, /object-fit: contain/);
+});
+
 test("main page includes the private easter egg after authorization", async () => {
   const page = await read("app/page.tsx");
 

@@ -479,6 +479,24 @@ button:disabled:hover {
   height: auto;
 }
 
+.photo-open-button {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+  padding: 0;
+}
+
+.photo-open-button:hover {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
 .photo-body {
   padding: 18px;
 }
@@ -503,6 +521,98 @@ button:disabled:hover {
   color: var(--green) !important;
   font-size: 0.92rem;
   font-weight: 680;
+}
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 16, 13, 0.92);
+  padding: clamp(14px, 3vw, 32px);
+}
+
+.lightbox-frame {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  width: min(100%, 1320px);
+  max-height: calc(100vh - 48px);
+  margin: 0;
+}
+
+.lightbox-frame img {
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 116px);
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.lightbox-frame figcaption {
+  display: flex;
+  max-width: min(100%, 920px);
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 250, 242, 0.9);
+  text-align: center;
+}
+
+.lightbox-frame figcaption strong {
+  overflow-wrap: anywhere;
+}
+
+.lightbox-frame figcaption span {
+  color: rgba(255, 250, 242, 0.62);
+  white-space: nowrap;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: fixed;
+  z-index: 31;
+  border: 1px solid rgba(255, 250, 242, 0.18);
+  background: rgba(255, 250, 242, 0.12);
+  color: var(--cream);
+  backdrop-filter: blur(12px);
+}
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: rgba(255, 250, 242, 0.2);
+}
+
+.lightbox-close {
+  top: 18px;
+  right: 18px;
+  min-height: 44px;
+}
+
+.lightbox-nav {
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 2.6rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.lightbox-nav:hover {
+  transform: translateY(-50%);
+}
+
+.lightbox-prev {
+  left: 18px;
+}
+
+.lightbox-next {
+  right: 18px;
 }
 
 .admin-form {
@@ -848,6 +958,44 @@ button:disabled:hover {
 
   .admin-photo-actions button {
     width: 100%;
+  }
+
+  .photo-lightbox {
+    padding: 12px;
+  }
+
+  .lightbox-frame {
+    max-height: calc(100vh - 24px);
+  }
+
+  .lightbox-frame img {
+    max-height: calc(100vh - 132px);
+  }
+
+  .lightbox-close {
+    top: 12px;
+    right: 12px;
+  }
+
+  .lightbox-nav {
+    top: auto;
+    bottom: 18px;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    transform: none;
+  }
+
+  .lightbox-nav:hover {
+    transform: none;
+  }
+
+  .lightbox-prev {
+    left: 18px;
+  }
+
+  .lightbox-next {
+    right: 18px;
   }
 
   .secret-modal {

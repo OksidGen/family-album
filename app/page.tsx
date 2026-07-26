@@ -67,6 +67,7 @@ export default function Home() {
     coverPositionX: 50,
     coverPositionY: 50,
   });
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isEasterEggOpen, setIsEasterEggOpen] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -129,11 +130,53 @@ export default function Home() {
     return photos.filter((photo) => photo.category === activeCategory);
   }, [activeCategory, photos]);
 
+  const visibleLightboxIndex = lightboxIndex !== null && lightboxIndex < filteredPhotos.length ? lightboxIndex : null;
+  const lightboxPhoto = visibleLightboxIndex === null ? null : filteredPhotos[visibleLightboxIndex] ?? null;
+
+  useEffect(() => {
+    if (visibleLightboxIndex === null || filteredPhotos.length === 0) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setLightboxIndex(null);
+      }
+      if (event.key === "ArrowLeft") {
+        setLightboxIndex((current) =>
+          current === null ? current : (current - 1 + filteredPhotos.length) % filteredPhotos.length
+        );
+      }
+      if (event.key === "ArrowRight") {
+        setLightboxIndex((current) => (current === null ? current : (current + 1) % filteredPhotos.length));
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [filteredPhotos.length, visibleLightboxIndex]);
+
   const coverPhoto = settings.coverPhotoId ? photos.find((photo) => photo.id === settings.coverPhotoId) : null;
   const heroPhoto = coverPhoto ?? photos[0] ?? starterPhotos[0];
   const heroObjectPosition = `${settings.coverPositionX}% ${settings.coverPositionY}%`;
+  const lightboxPosition = visibleLightboxIndex === null ? 0 : visibleLightboxIndex + 1;
   const isAlbumEmpty = photos.length === 0;
   const isFolderListEmpty = folders.length === 0;
+
+  function showPreviousPhoto() {
+    setLightboxIndex((current) =>
+      current === null ? current : (current - 1 + filteredPhotos.length) % filteredPhotos.length
+    );
+  }
+
+  function showNextPhoto() {
+    setLightboxIndex((current) => (current === null ? current : (current + 1) % filteredPhotos.length));
+  }
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -278,9 +321,11 @@ export default function Home() {
 
         {filteredPhotos.length > 0 ? (
           <div className="photo-grid">
-            {filteredPhotos.map((photo) => (
+            {filteredPhotos.map((photo, index) => (
               <article className="photo-card" key={photo.id}>
-                <img src={photo.src} alt={photo.title} />
+                <button type="button" className="photo-open-button" onClick={() => setLightboxIndex(index)}>
+                  <img src={photo.src} alt={photo.title} />
+                </button>
                 <div className="photo-body">
                   <span>{photo.category}</span>
                   <h3>{photo.title}</h3>
@@ -301,6 +346,55 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {lightboxPhoto && (
+        <section
+          className="photo-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Просмотр фотографии"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <button type="button" className="lightbox-close" onClick={() => setLightboxIndex(null)}>
+            Закрыть
+          </button>
+          {filteredPhotos.length > 1 && (
+            <button
+              type="button"
+              className="lightbox-nav lightbox-prev"
+              aria-label="Предыдущая фотография"
+              onClick={(event) => {
+                event.stopPropagation();
+                showPreviousPhoto();
+              }}
+            >
+              ‹
+            </button>
+          )}
+          <figure className="lightbox-frame" onClick={(event) => event.stopPropagation()}>
+            <img src={lightboxPhoto.src} alt={lightboxPhoto.title} />
+            <figcaption>
+              <strong>{lightboxPhoto.title}</strong>
+              <span>
+                {lightboxPosition} / {filteredPhotos.length}
+              </span>
+            </figcaption>
+          </figure>
+          {filteredPhotos.length > 1 && (
+            <button
+              type="button"
+              className="lightbox-nav lightbox-next"
+              aria-label="Следующая фотография"
+              onClick={(event) => {
+                event.stopPropagation();
+                showNextPhoto();
+              }}
+            >
+              ›
+            </button>
+          )}
+        </section>
+      )}
     </main>
   );
 }
