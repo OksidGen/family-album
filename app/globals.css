@@ -830,6 +830,23 @@ button:disabled:hover {
   padding-top: 12px;
 }
 
+.cover-picker-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cover-picker-heading strong {
+  color: var(--ink);
+}
+
+.cover-picker-heading button {
+  min-height: 38px;
+  padding-inline: 14px;
+}
+
 .cover-picker-frame {
   position: relative;
   display: block;
@@ -1015,6 +1032,14 @@ button:disabled:hover {
   .cover-picker,
   .cover-previews {
     grid-template-columns: 1fr;
+  }
+
+  .cover-picker-heading {
+    display: grid;
+  }
+
+  .cover-picker-heading button {
+    width: 100%;
   }
 
   .cover-preview-phone {

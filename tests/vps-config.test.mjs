@@ -83,7 +83,10 @@ test("admin can choose the album cover photo", async () => {
   assert.match(adminPage, /Перетащить центр обложки/);
   assert.match(adminPage, /onPointerDown/);
   assert.match(adminPage, /onPointerMove/);
-  assert.match(adminPage, /onPointerUp/);
+  assert.match(adminPage, /onPointerUp=\{finishCoverDrag\}/);
+  assert.match(adminPage, /Сохранить центрирование/);
+  assert.match(adminPage, /saveCoverCenter/);
+  assert.match(adminPage, /Центрирование обложки сохранено/);
   assert.match(adminPage, /Предпросмотр обложки/);
   assert.match(adminPage, /Компьютер/);
   assert.match(adminPage, /Телефон/);

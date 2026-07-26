@@ -154,7 +154,12 @@ export default function AdminPage() {
     await loadAdminState();
   }
 
-  async function makeCoverPhoto(id: string, nextPositionX = 50, nextPositionY = 50) {
+  async function makeCoverPhoto(
+    id: string,
+    nextPositionX = 50,
+    nextPositionY = 50,
+    successMessage = "Обложка альбома обновлена."
+  ) {
     const response = await fetch("/api/settings", {
       method: "POST",
       headers: {
@@ -177,7 +182,11 @@ export default function AdminPage() {
     setCoverPhotoId(payload.settings.coverPhotoId);
     setCoverPositionX(payload.settings.coverPositionX);
     setCoverPositionY(payload.settings.coverPositionY);
-    setMessage("Обложка альбома обновлена.");
+    setMessage(successMessage);
+  }
+
+  async function saveCoverCenter(id: string) {
+    await makeCoverPhoto(id, coverPositionX, coverPositionY, "Центрирование обложки сохранено.");
   }
 
   function coverPositionFromPointer(event: PointerEvent<HTMLButtonElement>) {
@@ -207,13 +216,12 @@ export default function AdminPage() {
     }
   }
 
-  async function finishCoverDrag(event: PointerEvent<HTMLButtonElement>, id: string) {
-    const position = updateCoverPoint(event);
+  function finishCoverDrag(event: PointerEvent<HTMLButtonElement>) {
+    updateCoverPoint(event);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     setIsDraggingCoverPoint(false);
-    await makeCoverPhoto(id, position.x, position.y);
   }
 
   function cancelCoverDrag(event: PointerEvent<HTMLButtonElement>) {
@@ -473,13 +481,19 @@ export default function AdminPage() {
                   {coverPhotoId === photo.id && (
                     <div className="cover-picker">
                       <div>
+                        <div className="cover-picker-heading">
+                          <strong>Редактирование центра обложки</strong>
+                          <button type="button" className="ghost-button" onClick={() => saveCoverCenter(photo.id)}>
+                            Сохранить центрирование
+                          </button>
+                        </div>
                         <button
                           type="button"
                           className="cover-picker-frame"
                           aria-label="Перетащить центр обложки"
                           onPointerDown={startCoverDrag}
                           onPointerMove={moveCoverPoint}
-                          onPointerUp={(event) => finishCoverDrag(event, photo.id)}
+                          onPointerUp={finishCoverDrag}
                           onPointerCancel={cancelCoverDrag}
                         >
                           <img
