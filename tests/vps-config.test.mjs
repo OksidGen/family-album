@@ -54,6 +54,14 @@ test("admin upload form supports selecting multiple photos", async () => {
   assert.match(adminPage, /multiple onChange=\{handleFile\}/);
 });
 
+test("photo upload limit is 25 MB", async () => {
+  const route = await read("app/api/photos/route.ts");
+
+  assert.match(route, /MAX_IMAGE_BYTES = 25 \* 1024 \* 1024/);
+  assert.match(route, /не больше 25 МБ/);
+  assert.doesNotMatch(route, /не больше 10 МБ/);
+});
+
 test("main page includes the private easter egg after authorization", async () => {
   const page = await read("app/page.tsx");
 

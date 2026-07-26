@@ -14,7 +14,7 @@ import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
 function cleanText(value: FormDataEntryValue | null, fallback = "") {
   return String(value ?? fallback).trim();
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     if (file.size > MAX_IMAGE_BYTES) {
-      return Response.json({ error: "Файл должен быть не больше 10 МБ." }, { status: 400 });
+      return Response.json({ error: "Файл должен быть не больше 25 МБ." }, { status: 400 });
     }
 
     await ensureStorage();
