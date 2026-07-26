@@ -45,3 +45,11 @@ test("does not show demo photos after the unlocked album loads empty data", asyn
   assert.doesNotMatch(page, /setPhotos\(serverPhotos\.length > 0 \? serverPhotos : starterPhotos\)/);
   assert.doesNotMatch(page, /setFolders\(serverFolders\.length > 0 \? serverFolders : defaultFolders\)/);
 });
+
+test("admin upload form supports selecting multiple photos", async () => {
+  const adminPage = await read("app/admin/page.tsx");
+
+  assert.match(adminPage, /selectedFiles/);
+  assert.match(adminPage, /async function addPhotos/);
+  assert.match(adminPage, /multiple onChange=\{handleFile\}/);
+});

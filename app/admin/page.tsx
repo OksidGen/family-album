@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [uploadNote, setUploadNote] = useState("");
   const [uploadDate, setUploadDate] = useState("");
   const [folderName, setFolderName] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [message, setMessage] = useState("");
 
   const photoCountByFolder = useMemo(() => {
@@ -87,7 +87,7 @@ export default function AdminPage() {
   }
 
   function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    setSelectedFile(event.target.files?.[0] ?? null);
+    setSelectedFiles(Array.from(event.target.files ?? []));
   }
 
   async function createFolder(event: FormEvent<HTMLFormElement>) {
@@ -140,10 +140,10 @@ export default function AdminPage() {
     await loadAdminState();
   }
 
-  async function addPhoto(event: FormEvent<HTMLFormElement>) {
+  async function addPhotos(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedFile) {
-      setMessage("Выберите фотографию для загрузки.");
+    if (selectedFiles.length === 0) {
+      setMessage("Выберите одну или несколько фотографий для загрузки.");
       return;
     }
     if (!uploadCategory) {
@@ -151,31 +151,50 @@ export default function AdminPage() {
       return;
     }
 
-    const formData = new FormData();
-    formData.set("adminCode", adminCode);
-    formData.set("title", uploadTitle);
-    formData.set("category", uploadCategory);
-    formData.set("note", uploadNote);
-    formData.set("date", uploadDate);
-    formData.set("file", selectedFile);
+    const uploadedPhotos: Photo[] = [];
+    const baseTitle = uploadTitle.trim();
 
-    const response = await fetch("/api/photos", {
-      method: "POST",
-      body: formData,
-    });
-    const payload = (await response.json()) as { photo?: Photo; error?: string };
+    for (const [index, file] of selectedFiles.entries()) {
+      const formData = new FormData();
+      formData.set("adminCode", adminCode);
+      formData.set(
+        "title",
+        baseTitle && selectedFiles.length > 1 ? `${baseTitle} ${index + 1}` : baseTitle
+      );
+      formData.set("category", uploadCategory);
+      formData.set("note", uploadNote);
+      formData.set("date", uploadDate);
+      formData.set("file", file);
 
-    if (!response.ok || !payload.photo) {
-      setMessage(payload.error ?? "Не получилось загрузить фотографию.");
-      return;
+      const response = await fetch("/api/photos", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as { photo?: Photo; error?: string };
+
+      if (!response.ok || !payload.photo) {
+        setPhotos((current) => [...uploadedPhotos, ...current]);
+        setMessage(
+          uploadedPhotos.length > 0
+            ? `Загружено ${uploadedPhotos.length} фото, затем возникла ошибка: ${payload.error ?? "не получилось загрузить файл."}`
+            : payload.error ?? "Не получилось загрузить фотографии."
+        );
+        return;
+      }
+
+      uploadedPhotos.push(payload.photo);
     }
 
-    setPhotos((current) => [payload.photo!, ...current]);
+    setPhotos((current) => [...uploadedPhotos, ...current]);
     setUploadTitle("");
     setUploadNote("");
     setUploadDate("");
-    setSelectedFile(null);
-    setMessage("Фотография добавлена в семейный альбом.");
+    setSelectedFiles([]);
+    setMessage(
+      uploadedPhotos.length === 1
+        ? "Фотография добавлена в семейный альбом."
+        : `Фотографии добавлены в семейный альбом: ${uploadedPhotos.length}.`
+    );
     event.currentTarget.reset();
   }
 
@@ -282,7 +301,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <form className="admin-form" onSubmit={addPhoto}>
+          <form className="admin-form" onSubmit={addPhotos}>
             <p className="eyebrow">Загрузка</p>
             <h2>Новое фото</h2>
             <div className="field-grid">
@@ -322,8 +341,14 @@ export default function AdminPage() {
               />
             </label>
             <label className="file-drop">
-              <input type="file" accept="image/*" onChange={handleFile} />
-              <span>{selectedFile ? selectedFile.name : "Выберите фотографию"}</span>
+              <input type="file" accept="image/*" multiple onChange={handleFile} />
+              <span>
+                {selectedFiles.length > 0
+                  ? selectedFiles.length === 1
+                    ? selectedFiles[0].name
+                    : `Выбрано фото: ${selectedFiles.length}`
+                  : "Выберите фотографии"}
+              </span>
             </label>
             <button type="submit">Добавить фото</button>
             {message && <p className="form-message">{message}</p>}
