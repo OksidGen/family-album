@@ -80,6 +80,20 @@ test("admin can choose the album cover photo", async () => {
   assert.match(page, /coverPhoto \?\? photos\[0\]/);
 });
 
+test("album gallery preserves photo proportions in a masonry layout", async () => {
+  const styles = await read("app/globals.css");
+  const photoGridRule = styles.match(/\.photo-grid\s*{[^}]*}/)?.[0] ?? "";
+  const photoCardRule = styles.match(/\.photo-card\s*{[^}]*}/)?.[0] ?? "";
+  const photoImageRule = styles.match(/\.photo-card img\s*{[^}]*}/)?.[0] ?? "";
+
+  assert.match(photoGridRule, /column-count: 3/);
+  assert.match(photoGridRule, /column-gap:/);
+  assert.match(photoCardRule, /break-inside: avoid/);
+  assert.match(photoCardRule, /margin-bottom:/);
+  assert.match(photoImageRule, /height: auto/);
+  assert.doesNotMatch(photoImageRule, /object-fit: cover|aspect-ratio/);
+});
+
 test("main page includes the private easter egg after authorization", async () => {
   const page = await read("app/page.tsx");
 
