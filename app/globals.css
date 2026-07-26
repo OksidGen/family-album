@@ -470,31 +470,32 @@ button:disabled:hover {
 }
 
 .photo-grid {
-  column-count: 3;
-  column-gap: clamp(16px, 3vw, 28px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: clamp(14px, 2vw, 24px);
 }
 
 .photo-card {
-  display: inline-block;
-  width: 100%;
-  break-inside: avoid;
   overflow: hidden;
   border: 1px solid rgba(223, 209, 191, 0.92);
   border-radius: 8px;
   background: var(--cream);
   box-shadow: 0 18px 46px rgba(64, 43, 31, 0.08);
-  margin-bottom: clamp(16px, 3vw, 28px);
 }
 
 .photo-card img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 180ms ease;
 }
 
 .photo-open-button {
   display: block;
   width: 100%;
+  aspect-ratio: 4 / 3;
   min-height: 0;
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -507,6 +508,10 @@ button:disabled:hover {
   background: transparent;
   box-shadow: none;
   transform: none;
+}
+
+.photo-open-button:hover img {
+  transform: scale(1.035);
 }
 
 .photo-body {
@@ -859,7 +864,7 @@ button:disabled:hover {
   }
 
   .photo-grid {
-    column-count: 2;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   }
 }
 
@@ -875,7 +880,7 @@ button:disabled:hover {
   }
 
   .photo-grid {
-    column-count: 1;
+    grid-template-columns: 1fr;
   }
 
   .memory-strip div {

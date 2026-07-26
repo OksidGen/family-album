@@ -89,18 +89,18 @@ test("admin can choose the album cover photo", async () => {
   assert.doesNotMatch(page, /objectPosition|heroObjectPosition|coverPosition/);
 });
 
-test("album gallery preserves photo proportions in a masonry layout", async () => {
+test("album gallery shows photos as clickable thumbnails", async () => {
   const styles = await read("app/globals.css");
   const photoGridRule = styles.match(/\.photo-grid\s*{[^}]*}/)?.[0] ?? "";
-  const photoCardRule = styles.match(/\.photo-card\s*{[^}]*}/)?.[0] ?? "";
+  const photoButtonRule = styles.match(/\.photo-open-button\s*{[^}]*}/)?.[0] ?? "";
   const photoImageRule = styles.match(/\.photo-card img\s*{[^}]*}/)?.[0] ?? "";
 
-  assert.match(photoGridRule, /column-count: 3/);
-  assert.match(photoGridRule, /column-gap:/);
-  assert.match(photoCardRule, /break-inside: avoid/);
-  assert.match(photoCardRule, /margin-bottom:/);
-  assert.match(photoImageRule, /height: auto/);
-  assert.doesNotMatch(photoImageRule, /object-fit: cover|aspect-ratio/);
+  assert.match(photoGridRule, /display: grid/);
+  assert.match(photoGridRule, /repeat\(auto-fill, minmax\(210px, 1fr\)\)/);
+  assert.match(photoButtonRule, /aspect-ratio: 4 \/ 3/);
+  assert.match(photoButtonRule, /cursor: zoom-in/);
+  assert.match(photoImageRule, /height: 100%/);
+  assert.match(photoImageRule, /object-fit: cover/);
 });
 
 test("album photos open in a filtered fullscreen lightbox", async () => {
