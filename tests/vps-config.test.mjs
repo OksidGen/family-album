@@ -61,3 +61,9 @@ test("main page includes the private easter egg after authorization", async () =
   assert.match(page, /Маленькая мысль/);
   assert.match(page, /Каковы были шансы\?/);
 });
+
+test("main page does not render the closed access stat block", async () => {
+  const page = await read("app/page.tsx");
+
+  assert.doesNotMatch(page, /закрытый доступ/);
+});

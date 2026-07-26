@@ -237,10 +237,6 @@ export default function Home() {
           <strong>{folders.length}</strong>
           <span>папок</span>
         </div>
-        <div>
-          <strong>1</strong>
-          <span>закрытый доступ</span>
-        </div>
       </section>
 
       <section id="gallery" className="content-band">
