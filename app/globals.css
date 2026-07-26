@@ -379,6 +379,7 @@ button:disabled:hover {
 
 .secret-modal p:not(.eyebrow) {
   margin-bottom: 14px;
+  text-indent: 1.35em;
 }
 
 .secret-modal button {
