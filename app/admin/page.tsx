@@ -472,26 +472,46 @@ export default function AdminPage() {
                   </div>
                   {coverPhotoId === photo.id && (
                     <div className="cover-picker">
-                      <button
-                        type="button"
-                        className="cover-picker-frame"
-                        aria-label="Перетащить центр обложки"
-                        onPointerDown={startCoverDrag}
-                        onPointerMove={moveCoverPoint}
-                        onPointerUp={(event) => finishCoverDrag(event, photo.id)}
-                        onPointerCancel={cancelCoverDrag}
-                      >
-                        <img
-                          src={photo.src}
-                          alt=""
-                          style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
-                        />
-                        <span
-                          className="cover-marker"
-                          style={{ left: `${coverPositionX}%`, top: `${coverPositionY}%` }}
-                        />
-                      </button>
-                      <p>Перетащите точку туда, где должен быть центр обложки.</p>
+                      <div>
+                        <button
+                          type="button"
+                          className="cover-picker-frame"
+                          aria-label="Перетащить центр обложки"
+                          onPointerDown={startCoverDrag}
+                          onPointerMove={moveCoverPoint}
+                          onPointerUp={(event) => finishCoverDrag(event, photo.id)}
+                          onPointerCancel={cancelCoverDrag}
+                        >
+                          <img
+                            src={photo.src}
+                            alt=""
+                            style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
+                          />
+                          <span
+                            className="cover-marker"
+                            style={{ left: `${coverPositionX}%`, top: `${coverPositionY}%` }}
+                          />
+                        </button>
+                        <p>Перетащите точку туда, где должен быть центр обложки.</p>
+                      </div>
+                      <div className="cover-previews" aria-label="Предпросмотр обложки">
+                        <div className="cover-preview cover-preview-desktop">
+                          <span>Компьютер</span>
+                          <img
+                            src={photo.src}
+                            alt=""
+                            style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
+                          />
+                        </div>
+                        <div className="cover-preview cover-preview-phone">
+                          <span>Телефон</span>
+                          <img
+                            src={photo.src}
+                            alt=""
+                            style={{ objectPosition: `${coverPositionX}% ${coverPositionY}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </article>

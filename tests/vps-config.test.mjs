@@ -84,11 +84,18 @@ test("admin can choose the album cover photo", async () => {
   assert.match(adminPage, /onPointerDown/);
   assert.match(adminPage, /onPointerMove/);
   assert.match(adminPage, /onPointerUp/);
+  assert.match(adminPage, /Предпросмотр обложки/);
+  assert.match(adminPage, /Компьютер/);
+  assert.match(adminPage, /Телефон/);
   assert.match(page, /settings\.coverPhotoId/);
   assert.match(page, /objectPosition: heroObjectPosition/);
   assert.match(page, /coverPhoto \?\? photos\[0\]/);
   assert.match(styles, /max-height: 100vh/);
   assert.match(styles, /cover-picker-frame/);
+  assert.match(styles, /cover-preview-desktop/);
+  assert.match(styles, /cover-preview-phone/);
+  assert.match(styles, /aspect-ratio: 16 \/ 9/);
+  assert.match(styles, /aspect-ratio: 9 \/ 16/);
   assert.match(styles, /touch-action: none/);
   assert.match(styles, /background: transparent/);
 });
