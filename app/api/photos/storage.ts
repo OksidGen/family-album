@@ -18,6 +18,10 @@ export type StoredPhoto = {
   createdAt: string;
 };
 
+export type AlbumSettings = {
+  coverPhotoId: string | null;
+};
+
 export type PhotoResponse = {
   id: string;
   title: string;
@@ -52,6 +56,10 @@ function indexPath() {
 
 function foldersPath() {
   return path.join(dataDir(), "folders.json");
+}
+
+function settingsPath() {
+  return path.join(dataDir(), "settings.json");
 }
 
 export function uploadsDir() {
@@ -179,6 +187,19 @@ export async function writePhotos(photos: StoredPhoto[]) {
   await writeJsonFile(indexPath(), photos);
 }
 
+export async function readAlbumSettings(): Promise<AlbumSettings> {
+  await ensureStorage();
+
+  const settings = await readJsonFile<Partial<AlbumSettings>>(settingsPath(), {});
+  return {
+    coverPhotoId: typeof settings.coverPhotoId === "string" ? settings.coverPhotoId : null,
+  };
+}
+
+export async function writeAlbumSettings(settings: AlbumSettings) {
+  await writeJsonFile(settingsPath(), settings);
+}
+
 export async function readFolders() {
   await ensureStorage();
 
@@ -243,6 +264,28 @@ export async function findStoredPhoto(id: string) {
   return photos.find((photo) => photo.id === id) ?? null;
 }
 
+export async function setCoverPhoto(id: string) {
+  const photo = await findStoredPhoto(id);
+  if (!photo) {
+    throw new Error("Фотография не найдена.");
+  }
+
+  const settings = { coverPhotoId: photo.id };
+  await writeAlbumSettings(settings);
+  return settings;
+}
+
+async function clearCoverIfNeeded(deletedPhotoIds: string[]) {
+  if (deletedPhotoIds.length === 0) {
+    return;
+  }
+
+  const settings = await readAlbumSettings();
+  if (settings.coverPhotoId && deletedPhotoIds.includes(settings.coverPhotoId)) {
+    await writeAlbumSettings({ coverPhotoId: null });
+  }
+}
+
 export async function deleteStoredPhoto(id: string) {
   const photos = await readPhotos();
   const photo = photos.find((item) => item.id === id);
@@ -252,6 +295,7 @@ export async function deleteStoredPhoto(id: string) {
   }
 
   await writePhotos(photos.filter((item) => item.id !== id));
+  await clearCoverIfNeeded([id]);
 
   try {
     await unlink(path.join(uploadsDir(), photo.imageKey));
@@ -279,6 +323,7 @@ export async function deleteFolder(id: string) {
 
   await writePhotos(remainingPhotos);
   await writeFolders(remainingFolders);
+  await clearCoverIfNeeded(photosToDelete.map((photo) => photo.id));
 
   await Promise.all(
     photosToDelete.map(async (photo) => {

@@ -19,6 +19,10 @@ type Folder = {
   createdAt: string;
 };
 
+type AlbumSettings = {
+  coverPhotoId: string | null;
+};
+
 const ACCESS_KEY = "family-anniversary-access";
 
 const starterPhotos: Photo[] = [
@@ -56,6 +60,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Все");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [settings, setSettings] = useState<AlbumSettings>({ coverPhotoId: null });
   const [isEasterEggOpen, setIsEasterEggOpen] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -76,7 +81,7 @@ export default function Home() {
         if (!response.ok) {
           throw new Error("Не получилось загрузить фотографии.");
         }
-        return (await response.json()) as { photos?: Photo[]; folders?: Folder[] };
+        return (await response.json()) as { photos?: Photo[]; folders?: Folder[]; settings?: Partial<AlbumSettings> };
       })
       .then((payload) => {
         if (!isActive) {
@@ -86,6 +91,9 @@ export default function Home() {
         const serverFolders = payload.folders ?? [];
         setPhotos(serverPhotos);
         setFolders(serverFolders);
+        setSettings({
+          coverPhotoId: typeof payload.settings?.coverPhotoId === "string" ? payload.settings.coverPhotoId : null,
+        });
         setActiveCategory((current) =>
           current === "Все" || serverFolders.some((folder) => folder.name === current) ? current : "Все"
         );
@@ -94,6 +102,7 @@ export default function Home() {
         if (isActive) {
           setPhotos([]);
           setFolders([]);
+          setSettings({ coverPhotoId: null });
           setMessage("Введите семейный код, чтобы открыть альбом.");
         }
       });
@@ -112,7 +121,8 @@ export default function Home() {
     return photos.filter((photo) => photo.category === activeCategory);
   }, [activeCategory, photos]);
 
-  const heroPhoto = photos[0] ?? starterPhotos[0];
+  const coverPhoto = settings.coverPhotoId ? photos.find((photo) => photo.id === settings.coverPhotoId) : null;
+  const heroPhoto = coverPhoto ?? photos[0] ?? starterPhotos[0];
   const isAlbumEmpty = photos.length === 0;
   const isFolderListEmpty = folders.length === 0;
 

@@ -20,11 +20,16 @@ type Folder = {
   createdAt: string;
 };
 
+type AlbumSettings = {
+  coverPhotoId: string | null;
+};
+
 export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadNote, setUploadNote] = useState("");
@@ -49,6 +54,7 @@ export default function AdminPage() {
     const payload = (await response.json()) as {
       photos?: Photo[];
       folders?: Folder[];
+      settings?: Partial<AlbumSettings>;
       error?: string;
     };
 
@@ -60,6 +66,7 @@ export default function AdminPage() {
     const nextFolders = payload.folders ?? [];
     setPhotos(payload.photos ?? []);
     setFolders(nextFolders);
+    setCoverPhotoId(typeof payload.settings?.coverPhotoId === "string" ? payload.settings.coverPhotoId : null);
     setUploadCategory((current) =>
       nextFolders.some((folder) => folder.name === current) ? current : nextFolders[0]?.name || ""
     );
@@ -140,6 +147,25 @@ export default function AdminPage() {
     await loadAdminState();
   }
 
+  async function makeCoverPhoto(id: string) {
+    const response = await fetch("/api/settings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ adminCode, coverPhotoId: id }),
+    });
+    const payload = (await response.json()) as { settings?: AlbumSettings; error?: string };
+
+    if (!response.ok || !payload.settings) {
+      setMessage(payload.error ?? "Не получилось обновить обложку.");
+      return;
+    }
+
+    setCoverPhotoId(payload.settings.coverPhotoId);
+    setMessage("Обложка альбома обновлена.");
+  }
+
   async function addPhotos(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (selectedFiles.length === 0) {
@@ -214,6 +240,9 @@ export default function AdminPage() {
     }
 
     setPhotos((current) => current.filter((photo) => photo.id !== id));
+    if (coverPhotoId === id) {
+      setCoverPhotoId(null);
+    }
     setMessage("Фотография удалена.");
   }
 
@@ -361,16 +390,27 @@ export default function AdminPage() {
           {photos.length > 0 ? (
             <div className="admin-photo-list">
               {photos.map((photo) => (
-                <article className="admin-photo-row" key={photo.id}>
+                <article className={`admin-photo-row ${coverPhotoId === photo.id ? "is-cover" : ""}`} key={photo.id}>
                   <img src={photo.src} alt={photo.title} />
                   <div>
                     <span>{photo.category}</span>
                     <strong>{photo.title}</strong>
                     {photo.date && <p>{photo.date}</p>}
+                    {coverPhotoId === photo.id && <p className="cover-note">Обложка альбома</p>}
                   </div>
-                  <button type="button" className="danger-button" onClick={() => deletePhoto(photo.id)}>
-                    Удалить
-                  </button>
+                  <div className="admin-photo-actions">
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      disabled={coverPhotoId === photo.id}
+                      onClick={() => makeCoverPhoto(photo.id)}
+                    >
+                      {coverPhotoId === photo.id ? "На обложке" : "Сделать обложкой"}
+                    </button>
+                    <button type="button" className="danger-button" onClick={() => deletePhoto(photo.id)}>
+                      Удалить
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>

@@ -62,6 +62,24 @@ test("photo upload limit is 25 MB", async () => {
   assert.doesNotMatch(route, /не больше 10 МБ/);
 });
 
+test("admin can choose the album cover photo", async () => {
+  const storage = await read("app/api/photos/storage.ts");
+  const photosRoute = await read("app/api/photos/route.ts");
+  const settingsRoute = await read("app/api/settings/route.ts");
+  const adminPage = await read("app/admin/page.tsx");
+  const page = await read("app/page.tsx");
+
+  assert.match(storage, /settings\.json/);
+  assert.match(storage, /readAlbumSettings/);
+  assert.match(storage, /setCoverPhoto/);
+  assert.match(photosRoute, /settings/);
+  assert.match(settingsRoute, /coverPhotoId/);
+  assert.match(adminPage, /Сделать обложкой/);
+  assert.match(adminPage, /На обложке/);
+  assert.match(page, /settings\.coverPhotoId/);
+  assert.match(page, /coverPhoto \?\? photos\[0\]/);
+});
+
 test("main page includes the private easter egg after authorization", async () => {
   const page = await read("app/page.tsx");
 

@@ -5,6 +5,7 @@ import {
   ensureStorage,
   extensionForContentType,
   photoToResponse,
+  readAlbumSettings,
   readFolders,
   readPhotos,
   uploadsDir,
@@ -27,11 +28,12 @@ export async function GET(request: Request) {
       return unauthorized;
     }
 
-    const [photos, folders] = await Promise.all([readPhotos(), readFolders()]);
+    const [photos, folders, settings] = await Promise.all([readPhotos(), readFolders(), readAlbumSettings()]);
 
     return Response.json({
       photos: photos.map(photoToResponse),
       folders,
+      settings,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
