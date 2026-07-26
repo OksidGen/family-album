@@ -94,7 +94,7 @@ test("private easter egg text is split into meaningful indented blocks", async (
 
   assert.match(page, /ни планет\. Сила гравитации велика настолько, насколько нужно\./);
   assert.match(page, /А если бы электромагнитные силы не составляли 1%/);
-  assert.match(page, /На нашей планете 8 миллиардов людей/);
+  assert.match(page, /На нашей планете 8 миллиардов человек/);
   assert.match(styles, /text-indent: 1\.35em/);
 });
 

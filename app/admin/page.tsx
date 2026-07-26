@@ -143,7 +143,7 @@ export default function AdminPage() {
       return;
     }
 
-    setMessage(`Папка удалена. Удалено фото: ${payload.deletedPhotos ?? 0}.`);
+    setMessage(`Папка удалена. Удалено фотографий: ${payload.deletedPhotos ?? 0}.`);
     await loadAdminState();
   }
 
@@ -202,7 +202,7 @@ export default function AdminPage() {
         setPhotos((current) => [...uploadedPhotos, ...current]);
         setMessage(
           uploadedPhotos.length > 0
-            ? `Загружено ${uploadedPhotos.length} фото, затем возникла ошибка: ${payload.error ?? "не получилось загрузить файл."}`
+            ? `Загружено фотографий: ${uploadedPhotos.length}. Затем возникла ошибка: ${payload.error ?? "не получилось загрузить файл."}`
             : payload.error ?? "Не получилось загрузить фотографии."
         );
         return;
@@ -219,7 +219,7 @@ export default function AdminPage() {
     setMessage(
       uploadedPhotos.length === 1
         ? "Фотография добавлена в семейный альбом."
-        : `Фотографии добавлены в семейный альбом: ${uploadedPhotos.length}.`
+        : `Добавлено фотографий: ${uploadedPhotos.length}.`
     );
     event.currentTarget.reset();
   }
@@ -375,7 +375,7 @@ export default function AdminPage() {
                 {selectedFiles.length > 0
                   ? selectedFiles.length === 1
                     ? selectedFiles[0].name
-                    : `Выбрано фото: ${selectedFiles.length}`
+                    : `Выбрано фотографий: ${selectedFiles.length}`
                   : "Выберите фотографии"}
               </span>
             </label>
